@@ -11,7 +11,7 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(title: const Text("Home")),
       body: const Center(
         child: Text(
-          "giriş yaptın işte daha ne bakıyon",
+          "dummy home-page",
           style: TextStyle(fontSize: 20),
         ),
       ),

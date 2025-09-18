@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:water_wise/utils/snackbar.dart';
 import 'home_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
 import '../utils/statusbar.dart';
+import '../utils/snackbar.dart';
+import '../utils/dialogs.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,155 +14,199 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _obscurePassword = true;
 
-  void _login() {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      showErrorMessage(context, "Lütfen tüm alanları doldurun");
+  final _emailRegex = RegExp(r'^[\w\.\-]+@[\w\.\-]+\.\w{2,}$');
+
+  void _submitIfValid() {
+    if (!_formKey.currentState!.validate()) {
+      showErrorMessage(context, "Please fill out the form correctly");
       return;
     }
 
-    showSuccessMessage(context, "Giriş başarılı");
-
-    // Şimdilik doğrudan HomePage'e yönlendiriyoruz
-    Navigator.pushReplacement(
+    showSuccessDialog(
       context,
-      MaterialPageRoute(builder: (context) => const HomePage()),
+      "Login successful",
+      onOk: () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      },
+    );
+  }
+
+  InputDecoration _outlinedDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Color(0xFFD8CBC2)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFD8CBC2)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFFD8CBC2), width: 2),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     setStatusBarLightIcons();
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0A0E2F), Color(0xFF1B3C73)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        color: const Color(0xFF112250),
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.water_drop, size: 80, color: Colors.blue[300]),
-                const SizedBox(height: 16),
-                const Text(
-                  "Welcome Back",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 40),
-
-                // Email
-                TextField(
-                  controller: _emailController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.email, color: Colors.white70),
-                    labelText: "Email",
-                    labelStyle: const TextStyle(color: Colors.white70),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Password
-                TextField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.lock, color: Colors.white70),
-                    labelText: "Password",
-                    labelStyle: const TextStyle(color: Colors.white70),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: Colors.white70,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  // Logo
+                  Column(
+                    children: [
+                      Image.asset(
+                        "assets/images/water-wise-logo.png",
+                        height: 150,
+                        fit: BoxFit.contain,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
+                      const SizedBox(height: 10),
+
+                      const Text(
+                        "WELCOME BACK",
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.normal,
+                          color: Color(0xFFF5FDE8DD),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                    ],
+                  ),
+
+                  // Email
+                  TextFormField(
+                      controller: _emailController,
+                      style: const TextStyle(color: Color(0xFFD8CBC2)),
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: _outlinedDecoration("Email Address"),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return "Enter your email";
+                        }
+                        if (!_emailRegex.hasMatch(v.trim())) {
+                          return "Please enter a valid email address";
+                        }
+                        return null;
                       },
                     ),
-                  ),
-                ),
-                const SizedBox(height: 30),
+                  const SizedBox(height: 20),
 
-                // Login button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _login,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.blueAccent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  // Password
+                  TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      style: const TextStyle(color: Color(0xFFD8CBC2)),
+                      decoration: _outlinedDecoration("Password").copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Color(0xFFD8CBC2),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
                       ),
-                      elevation: 6,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return "Enter your password";
+                        }
+                        if (v.length < 6) {
+                          return "The password must be at least 6 characters long";
+                        }
+                        return null;
+                      },
                     ),
+                  const SizedBox(height: 12),
+
+                  // Forgot password
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ForgotPasswordPage(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "Forgot password?",
+                        style: TextStyle(color: Color(0xFFD8CBC2)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Login button
+                  SizedBox(
+                    width: 328,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _submitIfValid,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD8CBC2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(
+                            color: Color(0xFFD8CBC2),
+                            width: 1,
+                          ),
+                        ),
+                        padding: EdgeInsets.zero,
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        "LOGIN",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF112250),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RegisterPage(),
+                        ),
+                      );
+                    },
                     child: const Text(
-                      "Login",
-                      style: TextStyle(fontSize: 18, color: Colors.white),
+                      "Sign up",
+                      style: TextStyle(color: Color(0xFFD8CBC2)),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                              const ForgotPasswordPage()),
-                        );
-                      },
-                      child: const Text("Forgot Password?",
-                          style: TextStyle(color: Colors.white70)),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const RegisterPage()),
-                        );
-                      },
-                      child: const Text("Register",
-                          style: TextStyle(color: Colors.blueAccent)),
-                    ),
-                  ],
-                )
-              ],
+                ],
+              ),
             ),
           ),
         ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/snackbar.dart';
+import '../utils/statusbar.dart';
+import '../utils/dialogs.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -9,83 +11,111 @@ class ForgotPasswordPage extends StatefulWidget {
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
 
+  final _emailRegex = RegExp(r'^[\w\.\-]+@[\w\.\-]+\.\w{2,}$');
+
   void _resetPassword() {
-    if (_emailController.text.isEmpty) {
-      showErrorMessage(context, "Lütfen email girin");
+    if (!_formKey.currentState!.validate()) {
+      showErrorMessage(context, "Please enter a valid email address");
       return;
     }
-    showSuccessMessage(context, "Şifre sıfırlama bağlantısı gönderildi");
+
+    showSuccessDialog(
+      context,
+      "Password reset link has been sent to your email.",
+    );
+  }
+
+  InputDecoration _underlineDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Color(0xFF112250)),
+      enabledBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: Color(0xFF112250)),
+      ),
+      focusedBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: Color(0xFF112250), width: 2),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    setStatusBarDarkIcons();
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0A0E2F), Color(0xFF1B3C73)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        color: const Color(0xFFD8CBC2),
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                const Icon(Icons.lock_reset,
-                    size: 80, color: Colors.white70),
-                const SizedBox(height: 16),
-                const Text(
-                  "Reset Password",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 40),
-
-                // Email
-                TextField(
-                  controller: _emailController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.email, color: Colors.white70),
-                    labelText: "Email",
-                    labelStyle: const TextStyle(color: Colors.white70),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.1),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  const Icon(Icons.lock_reset,
+                      size: 80, color: Color(0xFF112250)),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Reset Password",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF112250),
                     ),
                   ),
-                ),
-                const SizedBox(height: 30),
+                  const SizedBox(height: 40),
 
-                // Reset button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _resetPassword,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.blueAccent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  // Email
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: _underlineDecoration("Email"),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return "Email is required";
+                      }
+                      if (!_emailRegex.hasMatch(v.trim())) {
+                        return "Please enter a valid email address";
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 30),
+
+                  // Reset button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _resetPassword,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF112250),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
                       ),
-                      elevation: 6,
-                    ),
-                    child: const Text(
-                      "Send Reset Link",
-                      style: TextStyle(fontSize: 18, color: Colors.white),
+                      child: const Text(
+                        "Send Reset Link",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFD8CBC2),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

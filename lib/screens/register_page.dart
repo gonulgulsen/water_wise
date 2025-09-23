@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'home_page.dart';
 import '../utils/snackbar.dart';
 import '../utils/statusbar.dart';
@@ -21,13 +23,14 @@ class _RegisterPageState extends State<RegisterPage> {
   final _cityController = TextEditingController();
   final _districtController = TextEditingController();
   final _neighborhoodController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   bool _agreedToTerms = false;
 
-  // özel karakter tespiti
   final _lettersSpacesTR = RegExp(r'^[A-Za-zÇĞİÖŞÜçğıöşü\s]+$');
 
-  void _submitIfValid() {
+  Future<void> _createAccount() async {
     if (!_formKey.currentState!.validate()) {
       showErrorMessage(context, "Please fill out the form correctly");
       return;
@@ -37,16 +40,52 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    showSuccessDialog(
-      context,
-      "Your account has been successfully created.",
-      onOk: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
-      },
-    );
+    try {
+      // 1. Firebase Authentication
+      UserCredential cred = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      final uid = cred.user!.uid;
+
+      // 2. Users koleksiyonuna profil bilgilerini kaydet
+      await FirebaseFirestore.instance.collection("users").doc(uid).set({
+        "name": _nameController.text.trim(),
+        "surname": _surnameController.text.trim(),
+        "phone": _phoneController.text.trim(),
+        "city": _cityController.text.trim(),
+        "district": _districtController.text.trim(),
+        "neighborhood": _neighborhoodController.text.trim(),
+        "email": _emailController.text.trim(),
+        "createdAt": FieldValue.serverTimestamp(),
+      });
+
+      // 3. Usages koleksiyonuna ilk veriyi aç
+      await FirebaseFirestore.instance.collection("usages").add({
+        "userId": uid,
+        "goal": 1600,
+        "weeklyLiters": 0,
+        "monthlyLiters": 0,
+        "billMonthly": 0,
+        "week": "2025-W01",
+      });
+
+      // Başarılı → yönlendir
+      showSuccessDialog(
+        context,
+        "Your account has been successfully created.",
+        onOk: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        },
+      );
+    } catch (e) {
+      showErrorMessage(context, "Error: ${e.toString()}");
+    }
   }
 
   InputDecoration _underlineDecoration(String label) {
@@ -76,6 +115,7 @@ class _RegisterPageState extends State<RegisterPage> {
               key: _formKey,
               child: Column(
                 children: [
+                  // Name & Surname
                   Row(
                     children: [
                       Expanded(
@@ -113,7 +153,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // telefon no
+                  // Phone
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
@@ -134,7 +174,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // şehir
+                  // City
                   TextFormField(
                     controller: _cityController,
                     decoration: _underlineDecoration("City"),
@@ -150,7 +190,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // ilçe
+                  // District
                   TextFormField(
                     controller: _districtController,
                     decoration: _underlineDecoration("District"),
@@ -166,7 +206,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // mahalle
+                  // Neighborhood
                   TextFormField(
                     controller: _neighborhoodController,
                     decoration: _underlineDecoration("Neighborhood"),
@@ -182,7 +222,42 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // terms kontrolü
+                  // Email
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: _underlineDecoration("Email"),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return "Email is required";
+                      }
+                      if (!RegExp(r'^[\w\.\-]+@[\w\.\-]+\.\w{2,}$')
+                          .hasMatch(v.trim())) {
+                        return "Enter a valid email";
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Password
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: _underlineDecoration("Password"),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return "Password is required";
+                      }
+                      if (v.length < 6) {
+                        return "Password must be at least 6 characters";
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Terms
                   Row(
                     children: [
                       Checkbox(
@@ -209,7 +284,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               ),
                               TextSpan(text: " and "),
                               TextSpan(
-                                text: "Term of use",
+                                text: "Terms of use",
                                 style: TextStyle(
                                   color: Colors.blue,
                                   decoration: TextDecoration.underline,
@@ -223,11 +298,11 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 30),
 
-                  // create account butonu
+                  // Create account button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _submitIfValid,
+                      onPressed: _createAccount,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF112250),
                         shape: RoundedRectangleBorder(

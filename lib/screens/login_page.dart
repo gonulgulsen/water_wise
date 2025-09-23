@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'home_page.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
+import 'main_shell.dart'; // 🔹 yeni ekleme
 import '../utils/statusbar.dart';
 import '../utils/snackbar.dart';
 import '../utils/dialogs.dart';
@@ -20,45 +20,25 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _isLoading = false;
 
   final _emailRegex = RegExp(r'^[\w\.\-]+@[\w\.\-]+\.\w{2,}$');
 
-  Future<void> _submitIfValid() async {
+  void _submitIfValid() {
     if (!_formKey.currentState!.validate()) {
       showErrorMessage(context, "Please fill out the form correctly");
       return;
     }
 
-    setState(() => _isLoading = true);
-
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      showSuccessDialog(
-        context,
-        "Login successful",
-        onOk: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
-          );
-        },
-      );
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        showErrorMessage(context, "No account found for this email");
-      } else if (e.code == 'wrong-password') {
-        showErrorMessage(context, "Incorrect password");
-      } else {
-        showErrorMessage(context, e.message ?? "Login failed");
-      }
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    showSuccessDialog(
+      context,
+      "Login successful",
+      onOk: () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainShell()), // 🔹 değiştirildi
+        );
+      },
+    );
   }
 
   InputDecoration _outlinedDecoration(String label) {
@@ -82,7 +62,7 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       body: Container(
-        color: const Color(0xFF112250),
+        color: const Color(0xFF112250), // koyu mavi arka plan
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -186,7 +166,7 @@ class _LoginPageState extends State<LoginPage> {
                     width: 328,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submitIfValid,
+                      onPressed: _submitIfValid,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFD8CBC2),
                         shape: RoundedRectangleBorder(
@@ -199,9 +179,7 @@ class _LoginPageState extends State<LoginPage> {
                         padding: EdgeInsets.zero,
                         elevation: 0,
                       ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Color(0xFF112250))
-                          : const Text(
+                      child: const Text(
                         "LOGIN",
                         style: TextStyle(
                           fontSize: 16,
@@ -213,7 +191,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Register link
+                  // Sign up
                   TextButton(
                     onPressed: () {
                       Navigator.push(

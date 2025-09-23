@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/snackbar.dart';
 import '../utils/statusbar.dart';
 import '../utils/dialogs.dart';
+import 'login_page.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -13,19 +15,51 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  bool _isLoading = false;
 
   final _emailRegex = RegExp(r'^[\w\.\-]+@[\w\.\-]+\.\w{2,}$');
 
-  void _resetPassword() {
+  Future<void> _resetPassword() async {
     if (!_formKey.currentState!.validate()) {
       showErrorMessage(context, "Please enter a valid email address");
       return;
     }
 
-    showSuccessDialog(
-      context,
-      "Password reset link has been sent to your email.",
-    );
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: _emailController.text.trim(),
+      );
+
+      // Her zaman aynı mesaj (hesap olsa da olmasa da)
+      showSuccessDialog(
+        context,
+        "If an account exists for this email, a reset link has been sent.",
+        onOk: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        },
+      );
+    } on FirebaseAuthException catch (e) {
+      // Hangi kod olursa olsun kullanıcıya aynı mesajı göster
+      showSuccessDialog(
+        context,
+        "If an account exists for this email, a reset link has been sent.",
+        onOk: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   InputDecoration _underlineDecoration(String label) {
@@ -95,7 +129,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _resetPassword,
+                      onPressed: _isLoading ? null : _resetPassword,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF112250),
                         shape: RoundedRectangleBorder(
@@ -104,7 +138,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         elevation: 0,
                       ),
-                      child: const Text(
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
                         "Send Reset Link",
                         style: TextStyle(
                           fontSize: 16,

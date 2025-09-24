@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:water_wise/screens/change_password.dart';
 import 'home_page.dart';
-import 'usage_page.dart'; // 🔹 UsagePage import edildi
+import 'usage_page.dart';
+import 'profile_page.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -13,10 +15,7 @@ class _MainShellState extends State<MainShell> {
   int _index = 2; // Home default
 
   final _pages = const [
-    Scaffold(
-      backgroundColor: Color(0xFFD8C8C2),
-      body: Center(child: Text("Profile Page")),
-    ),
+    ProfilePage(),
     UsagePage(),
     HomePage(),
     Scaffold(
@@ -27,6 +26,7 @@ class _MainShellState extends State<MainShell> {
       backgroundColor: Color(0xFFD8C8C2),
       body: Center(child: Text("Plant Page")),
     ),
+    ChangePassword(),
   ];
 
   Widget _buildNavItem(int i, IconData icon, String label) {

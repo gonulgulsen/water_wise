@@ -112,82 +112,94 @@ class _HomePageState extends State<HomePage> {
       ),
       builder: (ctx) {
         final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
-        return Padding(
-          padding: EdgeInsets.only(bottom: bottomInset),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 42,
-                    height: 5,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5FDE8),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  const Text(
-                    "Please enter the amount shown on your water meter.",
-                    style: TextStyle(color: Color(0xFFF5FDE8), fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
 
-                  /// Toggle Weekly / Monthly
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: bottomInset),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      ChoiceChip(
-                        label: const Text("Weekly"),
-                        selected: _period == "Weekly",
-                        onSelected: (_) => setState(() => _period = "Weekly"),
-                        selectedColor: const Color(0xFFEDC58F),
-                      ),
-                      const SizedBox(width: 12),
-                      ChoiceChip(
-                        label: const Text("Monthly"),
-                        selected: _period == "Monthly",
-                        onSelected: (_) => setState(() => _period = "Monthly"),
-                        selectedColor: const Color(0xFFEDC58F),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  /// Date alanı
-                  if (_period == "Weekly")
-                    InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: "Week",
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        filled: true,
-                        fillColor: Colors.white10,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.white30),
+                      Container(
+                        width: 42,
+                        height: 5,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5FDE8),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: Text(
-                        "Week ${getWeekNumber(_selectedDate)} of ${_selectedDate.year}",
-                        style: const TextStyle(color: Colors.white),
+                      const Text(
+                        "Please enter the amount shown on your water meter.",
+                        style: TextStyle(color: Color(0xFFF5FDE8), fontSize: 16),
                       ),
-                    )
-                  else
-                    InkWell(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: ctx,
-                          initialDate: _selectedDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2035),
-                        );
-                        if (picked != null) setState(() => _selectedDate = picked);
-                      },
-                      child: InputDecorator(
+                      const SizedBox(height: 16),
+
+                      // --- Toggle Weekly / Monthly ---
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ChoiceChip(
+                            label: const Text("Weekly"),
+                            selected: _period == "Weekly",
+                            onSelected: (_) =>
+                                setModalState(() => _period = "Weekly"),
+                            selectedColor: const Color(0xFFEDC58F),
+                          ),
+                          const SizedBox(width: 12),
+                          ChoiceChip(
+                            label: const Text("Monthly"),
+                            selected: _period == "Monthly",
+                            onSelected: (_) =>
+                                setModalState(() => _period = "Monthly"),
+                            selectedColor: const Color(0xFFEDC58F),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // --- Date Picker ---
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: _selectedDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2035),
+                          );
+                          if (picked != null) {
+                            setModalState(() => _selectedDate = picked);
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText: "Date",
+                            labelStyle: const TextStyle(color: Colors.white70),
+                            filled: true,
+                            fillColor: Colors.white10,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Colors.white30),
+                            ),
+                          ),
+                          child: Text(
+                            "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}",
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // --- Liters Input ---
+                      TextField(
+                        controller: _litersCtrl,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: Color(0xFFF5FDE8)),
                         decoration: InputDecoration(
-                          labelText: "Month",
+                          labelText: "Consumption (liters)",
                           labelStyle: const TextStyle(color: Colors.white70),
                           filled: true,
                           fillColor: Colors.white10,
@@ -196,77 +208,59 @@ class _HomePageState extends State<HomePage> {
                             borderSide: const BorderSide(color: Colors.white30),
                           ),
                         ),
-                        child: Text(
-                          "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}",
-                          style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 16),
+
+                      if (_period == "Monthly")
+                        TextField(
+                          controller: _billCtrl,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Color(0xFFF5FDE8)),
+                          decoration: InputDecoration(
+                            labelText: "Bill (₺)",
+                            labelStyle: const TextStyle(color: Colors.white70),
+                            filled: true,
+                            fillColor: Colors.white10,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Colors.white30),
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 18),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFEDC58F),
+                            foregroundColor: const Color(0xFF112250),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Usage saved ($_period).")),
+                            );
+                          },
+                          child: const Text("SUBMIT"),
                         ),
                       ),
-                    ),
-
-                  const SizedBox(height: 16),
-
-                  /// Liters
-                  TextField(
-                    controller: _litersCtrl,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Color(0xFFF5FDE8)),
-                    decoration: InputDecoration(
-                      labelText: "Consumption (liters)",
-                      labelStyle: const TextStyle(color: Colors.white70),
-                      filled: true,
-                      fillColor: Colors.white10,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.white30),
-                      ),
-                    ),
+                    ],
                   ),
-
-                  const SizedBox(height: 16),
-
-                  /// Bill sadece Monthly’de
-                  if (_period == "Monthly")
-                    TextField(
-                      controller: _billCtrl,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Color(0xFFF5FDE8)),
-                      decoration: InputDecoration(
-                        labelText: "Bill (Monthly)",
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        filled: true,
-                        fillColor: Colors.white10,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.white30),
-                        ),
-                      ),
-                    ),
-
-                  const SizedBox(height: 18),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEDC58F),
-                        foregroundColor: const Color(0xFF112250),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: _saveUsage,
-                      child: const Text("SUBMIT"),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
   }
+
 
   @override
   void dispose() {

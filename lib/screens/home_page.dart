@@ -18,6 +18,10 @@ class _HomePageState extends State<HomePage> {
   final _litersCtrl = TextEditingController();
   final _billCtrl = TextEditingController();
 
+
+  Offset fabPosition = const Offset(300, 0);
+
+
   final List<Map<String, dynamic>> _transactions = const [
     {
       "title": "Bill",
@@ -58,7 +62,10 @@ class _HomePageState extends State<HomePage> {
 
   String getWeekNumber(DateTime date) {
     int dayOfYear = int.parse(DateFormat("D").format(date));
-    return ((dayOfYear - date.weekday + 10) / 7).floor().toString().padLeft(2, '0');
+    return ((dayOfYear - date.weekday + 10) / 7)
+        .floor()
+        .toString()
+        .padLeft(2, '0');
   }
 
   Future<void> _saveUsage() async {
@@ -138,7 +145,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // --- Toggle Weekly / Monthly ---
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -182,7 +188,8 @@ class _HomePageState extends State<HomePage> {
                             fillColor: Colors.white10,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Colors.white30),
+                              borderSide:
+                              const BorderSide(color: Colors.white30),
                             ),
                           ),
                           child: Text(
@@ -193,7 +200,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // --- Liters Input ---
                       TextField(
                         controller: _litersCtrl,
                         keyboardType: TextInputType.number,
@@ -205,7 +211,8 @@ class _HomePageState extends State<HomePage> {
                           fillColor: Colors.white10,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.white30),
+                            borderSide:
+                            const BorderSide(color: Colors.white30),
                           ),
                         ),
                       ),
@@ -223,7 +230,8 @@ class _HomePageState extends State<HomePage> {
                             fillColor: Colors.white10,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Colors.white30),
+                              borderSide:
+                              const BorderSide(color: Colors.white30),
                             ),
                           ),
                         ),
@@ -235,18 +243,13 @@ class _HomePageState extends State<HomePage> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFEDC58F),
-                            foregroundColor: const Color(0xFF112250),
+                            foregroundColor: const Color(0xFFD8CBC2),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          onPressed: () {
-                            Navigator.pop(ctx);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Usage saved ($_period).")),
-                            );
-                          },
+                          onPressed: _saveUsage,
                           child: const Text("SUBMIT"),
                         ),
                       ),
@@ -260,7 +263,6 @@ class _HomePageState extends State<HomePage> {
       },
     );
   }
-
 
   @override
   void dispose() {
@@ -285,100 +287,142 @@ class _HomePageState extends State<HomePage> {
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Welcome back,", style: TextStyle(color: Colors.black54, fontSize: 14)),
+                Text("Welcome back,",
+                    style: TextStyle(color: Colors.black54, fontSize: 14)),
                 Text("Ankara, Bahçelievler",
-                    style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.w600)),
+                    style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: _openUsageSheet,
-            icon: const Icon(Icons.error_outline, color: Colors.red, size: 32),
-            tooltip: "Add Usage",
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Stack(
         children: [
-          ReservoirPieChart(city: "Ankara"),
-          const SizedBox(height: 20),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              const Text("Transaction History",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              if (_transactions.length > 4)
-                GestureDetector(
-                  onTap: () => setState(() => _showAll = !_showAll),
-                  child: Text(
-                    _showAll ? "See Less" : "See All",
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.w500,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
+              ReservoirPieChart(city: "Ankara"),
+              const SizedBox(height: 20),
 
-          ...visible.map((tx) {
-            final isExpense = tx["isExpense"] as bool;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5FDE8),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.white,
-                      child: Icon(tx["icon"] as IconData, color: Colors.black54),
+                  const Text("Transaction History",
+                      style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  if (_transactions.length > 4)
+                    GestureDetector(
+                      onTap: () => setState(() => _showAll = !_showAll),
+                      child: Text(
+                        _showAll ? "See Less" : "See All",
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w500,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(tx["title"] as String,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF112250),
-                            )),
-                        Text(tx["subtitle"] as String,
-                            style: const TextStyle(fontSize: 12, color: Colors.black38)),
-                      ],
-                    ),
-                  ]),
-                  Text(
-                    tx["amount"] as String,
-                    style: TextStyle(
-                      color: isExpense ? Colors.red : Colors.green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
                 ],
               ),
-            );
-          }),
+              const SizedBox(height: 8),
+
+              ...visible.map((tx) {
+                final isExpense = tx["isExpense"] as bool;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5FDE8),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.white,
+                          child: Icon(tx["icon"] as IconData,
+                              color: Colors.black54),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(tx["title"] as String,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF112250),
+                                )),
+                            Text(tx["subtitle"] as String,
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.black38)),
+                          ],
+                        ),
+                      ]),
+                      Text(
+                        tx["amount"] as String,
+                        style: TextStyle(
+                          color: isExpense ? Colors.red : Colors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+          Positioned(
+            left: fabPosition.dx,
+            top: fabPosition.dy,
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                setState(() {
+                  final screenSize = MediaQuery.of(context).size;
+                  const fabWidth = 110.0;
+                  const fabHeight = 40.0;
+
+                  double newX = fabPosition.dx + details.delta.dx;
+                  double newY = fabPosition.dy + details.delta.dy;
+
+                  if (newX < 0) newX = 0;
+                  if (newY < 0) newY = 0;
+                  if (newX > screenSize.width - fabWidth) {
+                    newX = screenSize.width - fabWidth;
+                  }
+                  if (newY > screenSize.height - fabHeight - 100) {
+                    newY = screenSize.height - fabHeight - 100;
+                  }
+
+                  fabPosition = Offset(newX, newY);
+                });
+              },
+              child: FloatingActionButton.extended(
+                backgroundColor: const Color(0xFFC30B0E),
+                foregroundColor: const Color(0xFFD8CBC2),
+                onPressed: _openUsageSheet,
+                icon: const Icon(Icons.add),
+                label: const Text(
+                  "Usage",
+                  style: TextStyle(
+                    color: Color(0xFFD8CBC2),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-/// 🔹 Reservoir PieChart (senin kodun olduğu gibi)
 class ReservoirPieChart extends StatefulWidget {
   final String city;
   const ReservoirPieChart({super.key, required this.city});
@@ -403,7 +447,8 @@ class _ReservoirPieChartState extends State<ReservoirPieChart> {
         }
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
-          return _buildCard(const Center(child: Text("No reservoir data found")));
+          return _buildCard(
+              const Center(child: Text("No reservoir data found")));
         }
 
         final colors = [
@@ -431,8 +476,8 @@ class _ReservoirPieChartState extends State<ReservoirPieChart> {
                             touchedIndex = -1;
                             return;
                           }
-                          touchedIndex =
-                              pieTouchResponse.touchedSection!.touchedSectionIndex;
+                          touchedIndex = pieTouchResponse
+                              .touchedSection!.touchedSectionIndex;
                         });
                       },
                     ),

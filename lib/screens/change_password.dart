@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../utils/snackbar.dart';
 
 class ChangePassword extends StatefulWidget {
   const ChangePassword({super.key});
@@ -14,6 +17,46 @@ class _ChangePasswordState extends State<ChangePassword> {
 
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
+
+  final _auth = FirebaseAuth.instance;
+
+  Future<void> _changePassword() async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      showErrorMessage(context, "User is not logged in!");
+      return;
+    }
+
+    if (_newPasswordCtrl.text != _confirmPasswordCtrl.text) {
+      showErrorMessage(context, "Passwords do not match!");
+      return;
+    }
+
+    try {
+      // Reauthenticate
+      final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: _currentPasswordCtrl.text,
+      );
+      await user.reauthenticateWithCredential(cred);
+
+      // Update password
+      await user.updatePassword(_newPasswordCtrl.text);
+
+      showSuccessMessage(context, "Password changed successfully!");
+      Navigator.pop(context);
+
+    } on FirebaseAuthException catch (e) {
+      String message = "An error occurred";
+      if (e.code == "wrong-password") {
+        message = "Current password is incorrect!";
+      } else if (e.code == "weak-password") {
+        message = "New password is too weak!";
+      }
+      showErrorMessage(context, message);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +113,9 @@ class _ChangePasswordState extends State<ChangePassword> {
               icon: Icons.lock_outline,
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                  _obscureConfirmPassword
+                      ? Icons.visibility_off
+                      : Icons.visibility,
                   color: Colors.grey,
                 ),
                 onPressed: () {
@@ -79,15 +124,6 @@ class _ChangePasswordState extends State<ChangePassword> {
                 },
               ),
             ),
-            const SizedBox(height: 10),
-            const Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                "Both Passwords Must Match",
-                style: TextStyle(color: Colors.black26, fontSize: 12),
-              ),
-            ),
-
             const SizedBox(height: 80),
             SizedBox(
               width: double.infinity,
@@ -100,25 +136,13 @@ class _ChangePasswordState extends State<ChangePassword> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: () {
-                  if (_newPasswordCtrl.text == _confirmPasswordCtrl.text) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Password changed successfully!")),
-                    );
-                    Navigator.pop(context);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Passwords do not match!")),
-                    );
-                  }
-                },
+                onPressed: _changePassword,
                 child: const Text("Change Password"),
               ),
             )
           ],
         ),
       ),
-
     );
   }
 

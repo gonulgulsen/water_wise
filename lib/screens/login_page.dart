@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/snackbar.dart';
+import '../utils/statusbar.dart';
+import 'package:lottie/lottie.dart';
 import 'register_page.dart';
 import 'forgot_password_page.dart';
-import 'main_shell.dart'; // 🔹 yeni ekleme
-import '../utils/statusbar.dart';
-import '../utils/snackbar.dart';
-import '../utils/dialogs.dart';
+import 'main_shell.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -20,22 +20,131 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   final _emailRegex = RegExp(r'^[\w\.\-]+@[\w\.\-]+\.\w{2,}$');
 
-  void _submitIfValid() {
+  Future<void> _submitIfValid() async {
     if (!_formKey.currentState!.validate()) {
       showErrorMessage(context, "Please fill out the form correctly");
       return;
     }
 
-    showSuccessDialog(
-      context,
-      "Login successful",
-      onOk: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainShell()), // 🔹 değiştirildi
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      _showLoginSuccessDialog();
+    } on FirebaseAuthException catch (e) {
+      String message = "Login failed!";
+      if (e.code == "user-not-found") {
+        message = "No user found for this email.";
+      } else if (e.code == "wrong-password") {
+        message = "Incorrect password.";
+      } else if (e.code == "invalid-email") {
+        message = "Invalid email address.";
+      }
+      showErrorMessage(context, message);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showLoginSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 60),
+                padding: const EdgeInsets.fromLTRB(20, 80, 20, 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5FDE8),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Login Successful!",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF3C5070),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      "Welcome back! You are now logged in.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF3C5070),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MainShell(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3C5070),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 14,
+                        ),
+                      ),
+                      child: const Text(
+                        "Continue",
+                        style: TextStyle(
+                          color: Color(0xFFF5FDE8),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Positioned(
+                top: 0,
+                child: SizedBox(
+                  height: 120,
+                  width: 120,
+                  child: Lottie.network(
+                    "https://assets10.lottiefiles.com/packages/lf20_jbrw3hcz.json",
+                    repeat: false,
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -62,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       body: Container(
-        color: const Color(0xFF112250), // koyu mavi arka plan
+        color: const Color(0xFF112250),
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -141,7 +250,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Forgot password
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -161,12 +269,11 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Login button
                   SizedBox(
                     width: 328,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _submitIfValid,
+                      onPressed: _isLoading ? null : _submitIfValid,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFD8CBC2),
                         shape: RoundedRectangleBorder(
@@ -179,7 +286,11 @@ class _LoginPageState extends State<LoginPage> {
                         padding: EdgeInsets.zero,
                         elevation: 0,
                       ),
-                      child: const Text(
+                      child: _isLoading
+                          ? const CircularProgressIndicator(
+                        color: Color(0xFF112250),
+                      )
+                          : const Text(
                         "LOGIN",
                         style: TextStyle(
                           fontSize: 16,
@@ -191,7 +302,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Sign up
                   TextButton(
                     onPressed: () {
                       Navigator.push(

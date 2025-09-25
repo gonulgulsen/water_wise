@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:water_wise/screens/plant_page.dart';
 import 'home_page.dart';
 import 'usage_page.dart'; // 🔹 UsagePage import edildi
 
@@ -23,10 +24,7 @@ class _MainShellState extends State<MainShell> {
       backgroundColor: Color(0xFFD8C8C2),
       body: Center(child: Text("My Task Page")),
     ),
-    Scaffold(
-      backgroundColor: Color(0xFFD8C8C2),
-      body: Center(child: Text("Plant Page")),
-    ),
+    PlantPage()
   ];
 
   Widget _buildNavItem(int i, IconData icon, String label) {

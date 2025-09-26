@@ -16,9 +16,11 @@ class _TaskPageState extends State<TaskPage> {
 
   String selectedCategory = "Indoor";
   String selectedTab = "today";
-
+  int _hoveredIndex = -1;
   @override
   Widget build(BuildContext context) {
+    final double myTasksHeight = MediaQuery.of(context).size.height * 0.45;
+
     return Scaffold(
       backgroundColor: const Color(0xFFD8C8C2),
       body: SafeArea(
@@ -26,7 +28,6 @@ class _TaskPageState extends State<TaskPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 child: Row(
@@ -161,7 +162,6 @@ class _TaskPageState extends State<TaskPage> {
                 ),
               ),
 
-              // Show All (ikon şeridinin hemen altında, sağda)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
@@ -184,7 +184,6 @@ class _TaskPageState extends State<TaskPage> {
 
               const SizedBox(height: 24),
 
-              // My Tasks
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
@@ -197,7 +196,6 @@ class _TaskPageState extends State<TaskPage> {
                 ),
               ),
 
-              // Tabs
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
@@ -211,80 +209,108 @@ class _TaskPageState extends State<TaskPage> {
                 ),
               ),
 
-              // Firestore’dan liste
-              StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection("tasks").snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+              SizedBox(
+                height: myTasksHeight,
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection("tasks").snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                  final docs = snapshot.data!.docs.where((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return data["category"] == selectedCategory &&
-                        (data["status"] ?? "")
-                            .toString()
-                            .toLowerCase() ==
-                            selectedTab.toLowerCase();
-                  }).toList();
+                    final docs = snapshot.data!.docs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return data["category"] == selectedCategory &&
+                          (data["status"] ?? "")
+                              .toString()
+                              .toLowerCase() ==
+                              selectedTab.toLowerCase();
+                    }).toList();
 
-                  if (docs.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: Text("No tasks found")),
-                    );
-                  }
+                    if (docs.isEmpty) {
+                      return const Center(child: Text("No tasks found"));
+                    }
 
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    itemCount: docs.length,
-                    itemBuilder: (context, index) {
-                      final data = docs[index].data() as Map<String, dynamic>;
-                      return Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: const BorderSide(color: Colors.greenAccent),
-                        ),
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                data["title"] ?? "",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                data["description"] ?? "",
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  const Icon(Icons.calendar_today,
-                                      size: 16, color: Colors.grey),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    "${data["date"] ?? ""} ${data["time"] ?? ""}",
-                                    style: const TextStyle(color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                            ],
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final data = docs[index].data() as Map<String, dynamic>;
+                        return Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: const BorderSide(color: Colors.greenAccent),
                           ),
-                        ),
-                      );
-                    },
-                  );
-                },
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  data["title"] ?? "",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  data["description"] ?? "",
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                                const SizedBox(height: 10),
+
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.calendar_today,
+                                            size: 16, color: Colors.grey),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          "${data["date"] ?? ""} ${data["time"] ?? ""}",
+                                          style: const TextStyle(color: Colors.grey),
+                                        ),
+                                      ],
+                                    ),
+
+                                    MouseRegion(
+                                      cursor: SystemMouseCursors.click,
+                                      onEnter: (_) => setState(() => _hoveredIndex = index),
+                                      onExit: (_) => setState(() => _hoveredIndex = -1),
+                                      child: GestureDetector(
+                                        onTap: () async {
+                                          await FirebaseFirestore.instance
+                                              .collection("tasks")
+                                              .doc(docs[index].id)
+                                              .delete();
+                                        },
+                                        child: Icon(
+                                          Icons.delete,
+                                          size: 18,
+                                          color: _hoveredIndex == index
+                                              ? Colors.grey.shade800
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+
+
+                      },
+                    );
+                  },
+                ),
               ),
+
               const SizedBox(height: 12),
             ],
           ),
@@ -293,7 +319,6 @@ class _TaskPageState extends State<TaskPage> {
     );
   }
 
-  // Tabs
   Widget _buildTab(String text) {
     return GestureDetector(
       onTap: () => setState(() => selectedTab = text.toLowerCase()),
@@ -309,11 +334,9 @@ class _TaskPageState extends State<TaskPage> {
     );
   }
 
-  // --------- ICON TILE (tıklanınca görev oluşturma diyaloğu açılır) ---------
   Widget _buildTaskIcon(String assetPath, String title) {
     return GestureDetector(
       onTap: () {
-        // marketteki açıklamayı bul (yoksa boş)
         final opt = _optionForTitle(title, assetPath, selectedCategory);
         _openCreateTaskDialog(opt);
       },
@@ -353,7 +376,6 @@ class _TaskPageState extends State<TaskPage> {
     );
   }
 
-  // ----------------- SHOW ALL BOTTOM SHEET -----------------
   void _openShowAllSheet(BuildContext context, String category) {
     final items = _taskOptions(category);
 
@@ -371,7 +393,6 @@ class _TaskPageState extends State<TaskPage> {
           child: Column(
             children: [
               const SizedBox(height: 10),
-              // handle
               Container(
                 width: 48,
                 height: 5,
@@ -399,8 +420,8 @@ class _TaskPageState extends State<TaskPage> {
   Widget _sheetCard(BuildContext ctx, _TaskOption item) {
     return GestureDetector(
       onTap: () {
-        Navigator.pop(ctx);          // önce sheet kapansın
-        _openCreateTaskDialog(item); // sonra diyalog açılsın
+        Navigator.pop(ctx);
+        _openCreateTaskDialog(item);
       },
       child: Container(
         decoration: BoxDecoration(
@@ -454,7 +475,7 @@ class _TaskPageState extends State<TaskPage> {
 
   void _openCreateTaskDialog(_TaskOption option) {
     final noteController = TextEditingController();
-    String status = 'today'; // today | upcoming | completed
+    String status = 'today';
     DateTime selectedDate = DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.now();
 
@@ -493,7 +514,6 @@ class _TaskPageState extends State<TaskPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // ---- İKON + BAŞLIK YAN YANA ----
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
@@ -526,10 +546,8 @@ class _TaskPageState extends State<TaskPage> {
                         ),
                         const SizedBox(height: 8),
                         const Divider(height: 1),
-
                         const SizedBox(height: 12),
 
-                        // ---- NOT ----
                         TextField(
                           controller: noteController,
                           maxLines: 3,
@@ -541,7 +559,6 @@ class _TaskPageState extends State<TaskPage> {
 
                         const SizedBox(height: 12),
 
-                        // ---- STATUS (Wrap ile, overflow yok) ----
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
@@ -566,7 +583,6 @@ class _TaskPageState extends State<TaskPage> {
 
                         const SizedBox(height: 12),
 
-                        // ---- TARİH / SAAT ----
                         Row(
                           children: [
                             Expanded(
@@ -574,9 +590,7 @@ class _TaskPageState extends State<TaskPage> {
                                 onPressed: pickDate,
                                 icon: const Icon(Icons.calendar_today, size: 18),
                                 label: Text(
-                                  "${selectedDate.year.toString().padLeft(4,'0')}"
-                                      "-${selectedDate.month.toString().padLeft(2,'0')}"
-                                      "-${selectedDate.day.toString().padLeft(2,'0')}",
+                                  DateFormat("yyyy-MM-dd").format(selectedDate),
                                 ),
                               ),
                             ),
@@ -586,8 +600,7 @@ class _TaskPageState extends State<TaskPage> {
                                 onPressed: pickTime,
                                 icon: const Icon(Icons.access_time, size: 18),
                                 label: Text(
-                                  "${selectedTime.hour.toString().padLeft(2,'0')}"
-                                      ":${selectedTime.minute.toString().padLeft(2,'0')}",
+                                  "${selectedTime.hour.toString().padLeft(2,'0')}:${selectedTime.minute.toString().padLeft(2,'0')}",
                                 ),
                               ),
                             ),
@@ -596,7 +609,6 @@ class _TaskPageState extends State<TaskPage> {
 
                         const SizedBox(height: 16),
 
-                        // ---- KAYDET ----
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -608,14 +620,6 @@ class _TaskPageState extends State<TaskPage> {
                               ),
                             ),
                             onPressed: () async {
-                              final dateStr =
-                                  "${selectedDate.year.toString().padLeft(4,'0')}-"
-                                  "${selectedDate.month.toString().padLeft(2,'0')}-"
-                                  "${selectedDate.day.toString().padLeft(2,'0')}";
-                              final timeStr =
-                                  "${selectedTime.hour.toString().padLeft(2,'0')}:"
-                                  "${selectedTime.minute.toString().padLeft(2,'0')}";
-
                               await FirebaseFirestore.instance
                                   .collection('tasks')
                                   .add({
@@ -623,10 +627,11 @@ class _TaskPageState extends State<TaskPage> {
                                 "description": option.description,
                                 "iconPath": option.iconPath,
                                 "note": noteController.text.trim(),
-                                "category": selectedCategory,   // Indoor/Outdoor
-                                "status": status,               // today/upcoming/completed
-                                "date": dateStr,
-                                "time": timeStr,
+                                "category": selectedCategory,
+                                "status": status,
+                                "date": DateFormat("yyyy-MM-dd").format(selectedDate),
+                                "time":
+                                "${selectedTime.hour.toString().padLeft(2,'0')}:${selectedTime.minute.toString().padLeft(2,'0')}",
                               });
 
                               if (context.mounted) Navigator.pop(ctx);
@@ -646,8 +651,6 @@ class _TaskPageState extends State<TaskPage> {
     );
   }
 
-
-  // ----------------- Market Verisi -----------------
   List<_TaskOption> _taskOptions(String category) {
     if (category == "Indoor") {
       return [

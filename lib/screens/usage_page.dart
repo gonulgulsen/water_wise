@@ -321,61 +321,6 @@ class UsageHeader extends StatelessWidget {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Line Chart Card
 class CustomLineChartCard extends StatelessWidget {
   final String title;
@@ -393,15 +338,14 @@ class CustomLineChartCard extends StatelessWidget {
     required this.goalText,
   });
 
-  /// 🔹 Period formatlayan yardımcı fonksiyon
   String _formatPeriod(String period) {
     if (period.contains("W")) {
       final week = int.tryParse(period.substring(5)) ?? 0;
-      return "W$week"; // örn: 2025W39 -> W39
+      return "W$week";
     } else if (period.contains("M")) {
       final year = int.tryParse(period.substring(0, 4)) ?? DateTime.now().year;
       final month = int.tryParse(period.substring(5)) ?? 1;
-      return DateFormat.MMM().format(DateTime(year, month)); // örn: 2025M09 -> Sep
+      return DateFormat.MMM().format(DateTime(year, month));
     }
     return period;
   }
@@ -447,7 +391,7 @@ class CustomLineChartCard extends StatelessWidget {
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
-                              _formatPeriod(raw), // 🔹 artık formatlanmış
+                              _formatPeriod(raw),
                               style: const TextStyle(
                                   fontSize: 11, fontWeight: FontWeight.w500),
                             ),
@@ -477,51 +421,6 @@ class CustomLineChartCard extends StatelessWidget {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Bar Chart Card
 class SpendingBarChartCard extends StatelessWidget {
   final String title;
@@ -537,14 +436,11 @@ class SpendingBarChartCard extends StatelessWidget {
     required this.spendingText,
   });
 
-  // 🔹 period string'ini daha okunabilir hale çevir
   String formatPeriod(String period) {
     if (period.contains("W")) {
-      // örn: "2025W39" → "W39"
       final week = int.tryParse(period.substring(5)) ?? 0;
       return "W$week";
     } else if (period.contains("M")) {
-      // örn: "2025M09" → "Sep"
       final year = int.tryParse(period.substring(0, 4)) ?? DateTime.now().year;
       final month = int.tryParse(period.substring(5)) ?? 1;
       return DateFormat.MMM().format(DateTime(year, month));
@@ -592,7 +488,7 @@ class SpendingBarChartCard extends StatelessWidget {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 34, // 🔹 ekstra boşluk
+                      reservedSize: 34,
                       getTitlesWidget: (value, meta) {
                         if (value >= 0 && value < labels.length) {
                           final label = formatPeriod(labels[value.toInt()]);
@@ -625,69 +521,6 @@ class SpendingBarChartCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Transaction History Section
 class TransactionHistorySection extends StatefulWidget {
@@ -803,93 +636,7 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// padding: const EdgeInsets.all
-// See Less
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// -------------------- Previous Usage List --------------------
-// -------------------- Previous Usage List --------------------
-
-
+// Previous Usage List
 class PreviousUsageList extends StatefulWidget {
   final List<UsageData> previousUsages;
   const PreviousUsageList({super.key, required this.previousUsages});
@@ -901,7 +648,6 @@ class PreviousUsageList extends StatefulWidget {
 class _PreviousUsageListState extends State<PreviousUsageList> {
   bool show = false;
 
-  // 🔹 Dönem formatlama fonksiyonu
   String formatPeriod(String period) {
     try {
       if (period.contains("M")) {
@@ -928,7 +674,6 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Başlık + toggle
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -988,7 +733,7 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 🔹 Dönem
+                          // Dönem
                           Text(
                             formatPeriod(usage.period),
                             style: const TextStyle(
@@ -1001,7 +746,7 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
                           const Divider(
                               height: 14, thickness: 1, color: Colors.black12),
 
-                          // 🔹 Usage
+                          // Usage
                           Row(
                             children: [
                               CircleAvatar(
@@ -1026,7 +771,7 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
                           ),
                           const SizedBox(height: 6),
 
-                          // 🔹 Bill
+                          // Bill
                           Row(
                             children: [
                               CircleAvatar(
@@ -1051,7 +796,7 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
                           ),
                           const SizedBox(height: 6),
 
-                          // 🔹 Goal
+                          // Goal
                           Row(
                             children: [
                               CircleAvatar(

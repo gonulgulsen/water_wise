@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; // ✅ tarih-saat formatı için
 
 class TaskPage extends StatefulWidget {
   const TaskPage({super.key});
@@ -8,6 +9,7 @@ class TaskPage extends StatefulWidget {
 }
 
 class _TaskPageState extends State<TaskPage> {
+  // UI sabitleri
   static const double _iconTileWidth = 80;
   static const double _iconTileHeight = 130;
   static const double _imageSize = 56;
@@ -24,9 +26,9 @@ class _TaskPageState extends State<TaskPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header
               Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -53,16 +55,88 @@ class _TaskPageState extends State<TaskPage> {
                       ],
                     ),
                     const CircleAvatar(
-                      radius: 30,
+                      radius: 28,
                       backgroundImage: AssetImage("assets/images/avatar.jpg"),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 8),
 
-              _buildCategoryToggle(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF112250),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Stack(
+                    children: [
+                      AnimatedAlign(
+                        alignment: selectedCategory == "Indoor"
+                            ? Alignment.centerLeft
+                            : Alignment.centerRight,
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeInOut,
+                        child: Container(
+                          width: MediaQuery.of(context).size.width / 2 - 24,
+                          margin: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF04BFDA),
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            selectedCategory,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF112250),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => selectedCategory = "Indoor"),
+                              child: Center(
+                                child: Text(
+                                  "Indoor",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: selectedCategory == "Indoor"
+                                        ? Colors.transparent
+                                        : const Color(0xFF04BFDA),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => selectedCategory = "Outdoor"),
+                              child: Center(
+                                child: Text(
+                                  "Outdoor",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: selectedCategory == "Outdoor"
+                                        ? Colors.transparent
+                                        : const Color(0xFF04BFDA),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
               const SizedBox(height: 16),
 
@@ -73,36 +147,28 @@ class _TaskPageState extends State<TaskPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: selectedCategory == "Indoor"
                       ? [
-                    _buildTaskIcon("assets/images/dishwasher-icon.png",
-                        "Full Dishwasher"),
-                    _buildTaskIcon(
-                        "assets/images/shower-icon.png", "Short Shower"),
-                    _buildTaskIcon("assets/images/laundry2-icon.png",
-                        "Full Laundry"),
-                    _buildTaskIcon(
-                        "assets/images/reuse-icon.png", "Reuse Water"),
+                    _buildTaskIcon("assets/images/dishwasher-icon.png", "Full Dishwasher"),
+                    _buildTaskIcon("assets/images/shower-icon.png", "Short Shower"),
+                    _buildTaskIcon("assets/images/laundry2-icon.png", "Full Laundry"),
+                    _buildTaskIcon("assets/images/reuse-icon.png", "Reuse Water"),
                   ]
                       : [
-                    _buildTaskIcon(
-                        "assets/images/cloud-icon.png", "Rain Harvest"),
-                    _buildTaskIcon("assets/images/garden-watering-icon.png",
-                        "Night Watering"),
-                    _buildTaskIcon(
-                        "assets/images/drop-icon.png", "Drip Irrigation"),
-                    _buildTaskIcon(
-                        "assets/images/plants-icon.png", "Drought Plants"),
+                    _buildTaskIcon("assets/images/cloud-icon.png", "Rain Harvest"),
+                    _buildTaskIcon("assets/images/garden-watering-icon.png", "Night Watering"),
+                    _buildTaskIcon("assets/images/drop-icon.png", "Drip Irrigation"),
+                    _buildTaskIcon("assets/images/plants-icon.png", "Drought Plants"),
                   ],
                 ),
               ),
 
+              // Show All (ikon şeridinin hemen altında, sağda)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     GestureDetector(
-                      onTap: () =>
-                          _openShowAllSheet(context, selectedCategory),
+                      onTap: () => _openShowAllSheet(context, selectedCategory),
                       child: const Text(
                         "Show All",
                         style: TextStyle(
@@ -118,6 +184,7 @@ class _TaskPageState extends State<TaskPage> {
 
               const SizedBox(height: 24),
 
+              // My Tasks
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
@@ -132,8 +199,7 @@ class _TaskPageState extends State<TaskPage> {
 
               // Tabs
               Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
                     _buildTab("Today"),
@@ -145,10 +211,9 @@ class _TaskPageState extends State<TaskPage> {
                 ),
               ),
 
+              // Firestore’dan liste
               StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection("tasks")
-                    .snapshots(),
+                stream: FirebaseFirestore.instance.collection("tasks").snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
@@ -176,8 +241,7 @@ class _TaskPageState extends State<TaskPage> {
                     padding: const EdgeInsets.all(16),
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
-                      final data =
-                      docs[index].data() as Map<String, dynamic>;
+                      final data = docs[index].data() as Map<String, dynamic>;
                       return Card(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -209,8 +273,7 @@ class _TaskPageState extends State<TaskPage> {
                                   const SizedBox(width: 5),
                                   Text(
                                     "${data["date"] ?? ""} ${data["time"] ?? ""}",
-                                    style:
-                                    const TextStyle(color: Colors.grey),
+                                    style: const TextStyle(color: Colors.grey),
                                   ),
                                 ],
                               ),
@@ -230,82 +293,7 @@ class _TaskPageState extends State<TaskPage> {
     );
   }
 
-  // ✅ Yeni Toggle builder
-  Widget _buildCategoryToggle() {
-    return Container(
-      height: 44,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF112250),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Stack(
-        children: [
-          AnimatedAlign(
-            alignment: selectedCategory == "Indoor"
-                ? Alignment.centerLeft
-                : Alignment.centerRight,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
-            child: Container(
-              width: MediaQuery.of(context).size.width / 2 - 24,
-              margin: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: const Color(0xFF04BFDA),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                selectedCategory,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF112250),
-                ),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => selectedCategory = "Indoor"),
-                  child: Center(
-                    child: Text(
-                      "Indoor",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: selectedCategory == "Indoor"
-                            ? Colors.transparent
-                            : const Color(0xFF04BFDA),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => selectedCategory = "Outdoor"),
-                  child: Center(
-                    child: Text(
-                      "Outdoor",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: selectedCategory == "Outdoor"
-                            ? Colors.transparent
-                            : const Color(0xFF04BFDA),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Tab builder
+  // Tabs
   Widget _buildTab(String text) {
     return GestureDetector(
       onTap: () => setState(() => selectedTab = text.toLowerCase()),
@@ -321,44 +309,51 @@ class _TaskPageState extends State<TaskPage> {
     );
   }
 
-  // Icon tile
+  // --------- ICON TILE (tıklanınca görev oluşturma diyaloğu açılır) ---------
   Widget _buildTaskIcon(String assetPath, String title) {
-    return Container(
-      width: _iconTileWidth + 20,
-      margin: const EdgeInsets.only(right: 12),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: _imageSize + 32,
-            height: _imageSize + 32,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
+      onTap: () {
+        // marketteki açıklamayı bul (yoksa boş)
+        final opt = _optionForTitle(title, assetPath, selectedCategory);
+        _openCreateTaskDialog(opt);
+      },
+      child: Container(
+        width: _iconTileWidth + 20,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: _imageSize + 32,
+              height: _imageSize + 32,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Image.asset(assetPath, fit: BoxFit.contain),
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Image.asset(assetPath, fit: BoxFit.contain),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF112250),
+                height: 1.2,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF112250),
-              height: 1.2,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // ✅ Show All Sheet ve task seçenekleri kodların aynı (hiç değiştirmedim)
+  // ----------------- SHOW ALL BOTTOM SHEET -----------------
   void _openShowAllSheet(BuildContext context, String category) {
     final items = _taskOptions(category);
 
@@ -369,13 +364,14 @@ class _TaskPageState extends State<TaskPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) {
+      builder: (sheetCtx) {
         final height = MediaQuery.of(context).size.height * 0.8;
         return SizedBox(
           height: height,
           child: Column(
             children: [
               const SizedBox(height: 10),
+              // handle
               Container(
                 width: 48,
                 height: 5,
@@ -387,12 +383,10 @@ class _TaskPageState extends State<TaskPage> {
               const SizedBox(height: 12),
               Expanded(
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) =>
-                  const SizedBox(height: 12),
-                  itemBuilder: (_, i) => _sheetCard(items[i]),
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (_, i) => _sheetCard(context, items[i]), // parent context
                 ),
               ),
             ],
@@ -402,60 +396,258 @@ class _TaskPageState extends State<TaskPage> {
     );
   }
 
-  Widget _sheetCard(_TaskOption item) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F9EA),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Image.asset(item.iconPath, fit: BoxFit.contain),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  item.title,
-                  style: const TextStyle(
-                    color: Color(0xFF112250),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
+  Widget _sheetCard(BuildContext ctx, _TaskOption item) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pop(ctx);          // önce sheet kapansın
+        _openCreateTaskDialog(item); // sonra diyalog açılsın
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F9EA),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48, height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white, borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset(item.iconPath, fit: BoxFit.contain),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Container(
-              height: 1,
-              color: const Color(0xFF112250).withOpacity(0.25)),
-          const SizedBox(height: 8),
-          Text(
-            item.description,
-            style: const TextStyle(
-              color: Color(0xFF112250),
-              fontSize: 13,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: const TextStyle(
+                      color: Color(0xFF112250),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Container(height: 1, color: const Color(0xFF112250).withOpacity(0.25)),
+            const SizedBox(height: 8),
+            Text(
+              item.description,
+              style: const TextStyle(
+                color: Color(0xFF112250),
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  void _openCreateTaskDialog(_TaskOption option) {
+    final noteController = TextEditingController();
+    String status = 'today'; // today | upcoming | completed
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSB) {
+            Future<void> pickDate() async {
+              final d = await showDatePicker(
+                context: ctx,
+                initialDate: selectedDate,
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2100),
+              );
+              if (d != null) setSB(() => selectedDate = d);
+            }
+
+            Future<void> pickTime() async {
+              final t = await showTimePicker(context: ctx, initialTime: selectedTime);
+              if (t != null) setSB(() => selectedTime = t);
+            }
+
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: Colors.greenAccent),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ---- İKON + BAŞLIK YAN YANA ----
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(6),
+                                child: Image.asset(option.iconPath, fit: BoxFit.contain),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                option.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 18,
+                                  color: Color(0xFF112250),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        const Divider(height: 1),
+
+                        const SizedBox(height: 12),
+
+                        // ---- NOT ----
+                        TextField(
+                          controller: noteController,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            hintText: "Add a note (optional)",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // ---- STATUS (Wrap ile, overflow yok) ----
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ChoiceChip(
+                              label: const Text('Today'),
+                              selected: status == 'today',
+                              onSelected: (_) => setSB(() => status = 'today'),
+                            ),
+                            ChoiceChip(
+                              label: const Text('Upcoming'),
+                              selected: status == 'upcoming',
+                              onSelected: (_) => setSB(() => status = 'upcoming'),
+                            ),
+                            ChoiceChip(
+                              label: const Text('Completed'),
+                              selected: status == 'completed',
+                              onSelected: (_) => setSB(() => status = 'completed'),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // ---- TARİH / SAAT ----
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: pickDate,
+                                icon: const Icon(Icons.calendar_today, size: 18),
+                                label: Text(
+                                  "${selectedDate.year.toString().padLeft(4,'0')}"
+                                      "-${selectedDate.month.toString().padLeft(2,'0')}"
+                                      "-${selectedDate.day.toString().padLeft(2,'0')}",
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: pickTime,
+                                icon: const Icon(Icons.access_time, size: 18),
+                                label: Text(
+                                  "${selectedTime.hour.toString().padLeft(2,'0')}"
+                                      ":${selectedTime.minute.toString().padLeft(2,'0')}",
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // ---- KAYDET ----
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF04BFDA),
+                              foregroundColor: const Color(0xFF112250),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: () async {
+                              final dateStr =
+                                  "${selectedDate.year.toString().padLeft(4,'0')}-"
+                                  "${selectedDate.month.toString().padLeft(2,'0')}-"
+                                  "${selectedDate.day.toString().padLeft(2,'0')}";
+                              final timeStr =
+                                  "${selectedTime.hour.toString().padLeft(2,'0')}:"
+                                  "${selectedTime.minute.toString().padLeft(2,'0')}";
+
+                              await FirebaseFirestore.instance
+                                  .collection('tasks')
+                                  .add({
+                                "title": option.title,
+                                "description": option.description,
+                                "iconPath": option.iconPath,
+                                "note": noteController.text.trim(),
+                                "category": selectedCategory,   // Indoor/Outdoor
+                                "status": status,               // today/upcoming/completed
+                                "date": dateStr,
+                                "time": timeStr,
+                              });
+
+                              if (context.mounted) Navigator.pop(ctx);
+                            },
+                            child: const Text('Save Task'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+
+  // ----------------- Market Verisi -----------------
   List<_TaskOption> _taskOptions(String category) {
     if (category == "Indoor") {
       return [
@@ -490,8 +682,7 @@ class _TaskPageState extends State<TaskPage> {
         _TaskOption(
           iconPath: "assets/images/garden-watering-icon.png",
           title: "Night Watering",
-          description:
-          "Night watering helps save water during hot summer months.",
+          description: "Night watering helps save water during hot summer months.",
         ),
         _TaskOption(
           iconPath: "assets/images/drop-icon.png",
@@ -505,6 +696,15 @@ class _TaskPageState extends State<TaskPage> {
         ),
       ];
     }
+  }
+
+  _TaskOption _optionForTitle(String title, String fallbackIcon, String category) {
+    final list = _taskOptions(category);
+    final i = list.indexWhere((e) => e.title == title);
+    if (i == -1) {
+      return _TaskOption(iconPath: fallbackIcon, title: title, description: "");
+    }
+    return list[i];
   }
 }
 

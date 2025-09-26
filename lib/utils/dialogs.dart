@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 void showSuccessDialog(
     BuildContext context,
@@ -16,11 +17,19 @@ void showSuccessDialog(
           clipBehavior: Clip.none,
           alignment: Alignment.topCenter,
           children: [
+            // İçerik kutusu
             Container(
-              padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+              padding: const EdgeInsets.fromLTRB(20, 100, 20, 20),
               decoration: BoxDecoration(
-                color: const Color(0xFFf5fde8),
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFF5FDE8),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -29,44 +38,49 @@ void showSuccessDialog(
                     message,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontSize: 25,
-                      color: Color(0xFF3c5070),
-                      fontWeight: FontWeight.w500,
+                      fontSize: 22,
+                      color: Color(0xFF3C5070),
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
                       if (onOk != null) onOk();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3c5070),
+                      backgroundColor: const Color(0xFF3C5070),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
+                        horizontal: 28,
+                        vertical: 14,
                       ),
                     ),
                     child: const Text(
-                      "OK",
-                      style: TextStyle(color: Color(0xFFf5fde8)),
+                      "Continue",
+                      style: TextStyle(
+                        color: Color(0xFFF5FDE8),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
+
+            // 🔹 Üstte Lottie animasyonu
             Positioned(
-              top: -28,
-              child: CircleAvatar(
-                backgroundColor: const Color(0xFF3c5070),
-                radius: 28,
-                child: const Icon(
-                  Icons.check,
-                  color: Color(0xFFf5fde8),
-                  size: 32,
+              top: -60,
+              child: SizedBox(
+                height: 120,
+                width: 120,
+                child: Lottie.network(
+                  "https://assets10.lottiefiles.com/packages/lf20_jbrw3hcz.json",
+                  repeat: false,
                 ),
               ),
             ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_page.dart';
+import 'package:water_wise/screens/main_shell.dart';
 import '../utils/snackbar.dart';
 import '../utils/statusbar.dart';
 import '../utils/dialogs.dart';
@@ -79,7 +79,7 @@ class _RegisterPageState extends State<RegisterPage> {
         onOk: () {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
+            MaterialPageRoute(builder: (context) => const MainShell()),
           );
         },
       );

@@ -19,7 +19,21 @@ class _HomePageState extends State<HomePage> {
   final _billCtrl = TextEditingController();
   final _goalCtrl = TextEditingController();
 
-  Offset fabPosition = const Offset(300, 0);
+  Offset? fabPosition;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (fabPosition == null) {
+      final screen = MediaQuery.of(context).size;
+      const fabW = 110.0;
+      const fabH = 40.0;
+      fabPosition = Offset(
+          screen.width - fabW - 16,
+          16,
+      );
+    }
+  }
 
   Future<void> _saveUsage() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -342,17 +356,18 @@ class _HomePageState extends State<HomePage> {
                   ),
 
                   // FAB (taşınabilir)
+                  if (fabPosition != null)
                   Positioned(
-                    left: fabPosition.dx,
-                    top: fabPosition.dy,
+                    left: fabPosition!.dx,
+                    top: fabPosition!.dy,
                     child: GestureDetector(
                       onPanUpdate: (details) {
                         setState(() {
                           final screen = MediaQuery.of(context).size;
                           const fabW = 110.0;
                           const fabH = 40.0;
-                          double newX = fabPosition.dx + details.delta.dx;
-                          double newY = fabPosition.dy + details.delta.dy;
+                          double newX = fabPosition!.dx + details.delta.dx;
+                          double newY = fabPosition!.dy + details.delta.dy;
                           if (newX < 0) newX = 0;
                           if (newY < 0) newY = 0;
                           if (newX > screen.width - fabW)

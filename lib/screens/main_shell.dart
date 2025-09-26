@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:water_wise/screens/change_password.dart';
 import 'package:water_wise/screens/plant_page.dart';
+import 'package:water_wise/screens/task_page.dart';
 import 'home_page.dart';
 import 'usage_page.dart';
 import 'profile_page.dart';
@@ -19,10 +20,7 @@ class _MainShellState extends State<MainShell> {
     ProfilePage(),
     UsagePage(),
     HomePage(),
-    Scaffold(
-      backgroundColor: Color(0xFFD8C8C2),
-      body: Center(child: Text("My Task Page")),
-    ),
+    TaskPage(),
     PlantPage(),
     ChangePassword(),
   ];

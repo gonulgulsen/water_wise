@@ -268,63 +268,75 @@ class UsageHeader extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Container(
+          height: 44,
           decoration: BoxDecoration(
             color: const Color(0xFF2A3D5F),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(22),
           ),
-          child: Row(
+          child: Stack(
             children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => onToggle(true),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isWeekly
-                          ? const Color(0xFF04bfda)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      "Weekly",
-                      style: TextStyle(
-                        color: isWeekly
-                            ? const Color(0xFF112250)
-                            : const Color(0xFF04bfda),
-                        fontWeight: FontWeight.w600,
-                      ),
+              AnimatedAlign(
+                alignment:
+                isWeekly ? Alignment.centerLeft : Alignment.centerRight,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: Container(
+                  width: MediaQuery.of(context).size.width / 2 - 32,
+                  margin: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF04BFDA),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    isWeekly ? "Weekly" : "Monthly",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF112250),
                     ),
                   ),
                 ),
               ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => onToggle(false),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: !isWeekly
-                          ? const Color(0xFF04bfda)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      "Monthly",
-                      style: TextStyle(
-                        color: !isWeekly
-                            ? const Color(0xFF112250)
-                            : const Color(0xFF04bfda),
-                        fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onToggle(true),
+                      child: Center(
+                        child: Text(
+                          "Weekly",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isWeekly
+                                ? Colors.transparent
+                                : const Color(0xFF04BFDA),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onToggle(false),
+                      child: Center(
+                        child: Text(
+                          "Monthly",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: !isWeekly
+                                ? Colors.transparent
+                                : const Color(0xFF04BFDA),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
+
         const SizedBox(height: 16),
         Text(
           isWeekly
@@ -804,7 +816,6 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Dönem
                           Text(
                             formatPeriod(usage.period),
                             style: const TextStyle(

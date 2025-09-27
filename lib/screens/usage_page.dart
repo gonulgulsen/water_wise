@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
 
-// Transaction modeli
 class Transaction {
   final String title;
   final String subtitle;
@@ -22,7 +21,6 @@ class Transaction {
   });
 }
 
-// UsageData Model
 class UsageData {
   final String userId;
   final String type;
@@ -91,8 +89,13 @@ class _UsagePageState extends State<UsagePage> {
             }
 
             final docs = snapshot.data!.docs;
-            final current = UsageData.fromMap(docs.first.data() as Map<String, dynamic>);
-            final previous = docs.skip(1).map((d) => UsageData.fromMap(d.data() as Map<String, dynamic>)).toList();
+            final current = UsageData.fromMap(
+              docs.first.data() as Map<String, dynamic>,
+            );
+            final previous = docs
+                .skip(1)
+                .map((d) => UsageData.fromMap(d.data() as Map<String, dynamic>))
+                .toList();
 
             final transactions = [
               Transaction(
@@ -104,7 +107,9 @@ class _UsagePageState extends State<UsagePage> {
               ),
               Transaction(
                 title: "Usage",
-                subtitle: isWeekly ? "Weekly liters consumed" : "Monthly liters consumed",
+                subtitle: isWeekly
+                    ? "Weekly liters consumed"
+                    : "Monthly liters consumed",
                 amount: isWeekly ? current.weeklyLiters : current.liters,
                 isExpense: true,
                 unit: "L",
@@ -145,7 +150,10 @@ class _UsagePageState extends State<UsagePage> {
                                 width: 320,
                                 child: CustomLineChartCard(
                                   title: "Water Usage",
-                                  data: _buildLineChartData(docs.take(3).toList(), isWeekly),
+                                  data: _buildLineChartData(
+                                    docs.take(3).toList(),
+                                    isWeekly,
+                                  ),
                                   labels: _buildLabels(docs.take(3).toList()),
                                   usageText: isWeekly
                                       ? "You used ${current.weeklyLiters} L this week."
@@ -158,9 +166,12 @@ class _UsagePageState extends State<UsagePage> {
                                 width: 320,
                                 child: SpendingBarChartCard(
                                   title: "Your spending",
-                                  data: _buildBarChartData(docs.take(3).toList()),
+                                  data: _buildBarChartData(
+                                    docs.take(3).toList(),
+                                  ),
                                   labels: _buildLabels(docs.take(3).toList()),
-                                  spendingText: "You spent ₺${current.billMonthly} this month.",
+                                  spendingText:
+                                      "You spent ₺${current.billMonthly} this month.",
                                 ),
                               ),
                             ],
@@ -168,12 +179,11 @@ class _UsagePageState extends State<UsagePage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Transaction History Section
                         TransactionHistorySection(transactions: transactions),
                         const SizedBox(height: 5),
 
-                        // Previous Usage Grid
-                        if (previous.isNotEmpty) PreviousUsageList(previousUsages: previous),
+                        if (previous.isNotEmpty)
+                          PreviousUsageList(previousUsages: previous),
                       ],
                     ),
                   ),
@@ -186,11 +196,15 @@ class _UsagePageState extends State<UsagePage> {
     );
   }
 
-  // Helpers
-  List<FlSpot> _buildLineChartData(List<QueryDocumentSnapshot> docs, bool weekly) {
+  List<FlSpot> _buildLineChartData(
+    List<QueryDocumentSnapshot> docs,
+    bool weekly,
+  ) {
     final reversed = docs.reversed.toList();
     return List.generate(reversed.length, (i) {
-      final data = UsageData.fromMap(reversed[i].data() as Map<String, dynamic>);
+      final data = UsageData.fromMap(
+        reversed[i].data() as Map<String, dynamic>,
+      );
       return FlSpot(i.toDouble(), weekly ? data.weeklyLiters : data.liters);
     });
   }
@@ -198,7 +212,9 @@ class _UsagePageState extends State<UsagePage> {
   List<BarChartGroupData> _buildBarChartData(List<QueryDocumentSnapshot> docs) {
     final reversed = docs.reversed.toList();
     return List.generate(reversed.length, (i) {
-      final data = UsageData.fromMap(reversed[i].data() as Map<String, dynamic>);
+      final data = UsageData.fromMap(
+        reversed[i].data() as Map<String, dynamic>,
+      );
       return BarChartGroupData(
         x: i,
         barRods: [
@@ -211,13 +227,14 @@ class _UsagePageState extends State<UsagePage> {
   List<String> _buildLabels(List<QueryDocumentSnapshot> docs) {
     final reversed = docs.reversed.toList();
     return List.generate(reversed.length, (i) {
-      final data = UsageData.fromMap(reversed[i].data() as Map<String, dynamic>);
+      final data = UsageData.fromMap(
+        reversed[i].data() as Map<String, dynamic>,
+      );
       return data.period;
     });
   }
 }
 
-// Header
 class UsageHeader extends StatelessWidget {
   final bool isWeekly;
   final ValueChanged<bool> onToggle;
@@ -263,14 +280,18 @@ class UsageHeader extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: isWeekly ? const Color(0xFF04bfda) : Colors.transparent,
+                      color: isWeekly
+                          ? const Color(0xFF04bfda)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       "Weekly",
                       style: TextStyle(
-                        color: isWeekly ? const Color(0xFF112250) : const Color(0xFF04bfda),
+                        color: isWeekly
+                            ? const Color(0xFF112250)
+                            : const Color(0xFF04bfda),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -283,14 +304,18 @@ class UsageHeader extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: !isWeekly ? const Color(0xFF04bfda) : Colors.transparent,
+                      color: !isWeekly
+                          ? const Color(0xFF04bfda)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       "Monthly",
                       style: TextStyle(
-                        color: !isWeekly ? const Color(0xFF112250) : const Color(0xFF04bfda),
+                        color: !isWeekly
+                            ? const Color(0xFF112250)
+                            : const Color(0xFF04bfda),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -321,7 +346,6 @@ class UsageHeader extends StatelessWidget {
   }
 }
 
-// Line Chart Card
 class CustomLineChartCard extends StatelessWidget {
   final String title;
   final List<FlSpot> data;
@@ -361,21 +385,34 @@ class CustomLineChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3c5070))),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF3c5070),
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
               const Icon(Icons.water_drop, color: Color(0xFF04bfda), size: 20),
               const SizedBox(width: 6),
-              Text(usageText,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0D1B4C))),
+              Text(
+                usageText,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Color(0xFF0D1B4C),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
-          Text(goalText, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+          Text(
+            goalText,
+            style: const TextStyle(color: Colors.black54, fontSize: 12),
+          ),
           const SizedBox(height: 1),
           Expanded(
             child: LineChart(
@@ -393,7 +430,9 @@ class CustomLineChartCard extends StatelessWidget {
                             child: Text(
                               _formatPeriod(raw),
                               style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.w500),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           );
                         }
@@ -421,7 +460,6 @@ class CustomLineChartCard extends StatelessWidget {
   }
 }
 
-// Bar Chart Card
 class SpendingBarChartCard extends StatelessWidget {
   final String title;
   final List<BarChartGroupData> data;
@@ -459,26 +497,34 @@ class SpendingBarChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF3c5070))),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF3c5070),
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
               const Icon(Icons.attach_money, color: Colors.green, size: 20),
               const SizedBox(width: 6),
-              Text(spendingText,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.green)),
+              Text(
+                spendingText,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.green,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
-          const Text("Compared to last 3 records",
-              style: TextStyle(color: Colors.black54, fontSize: 12)),
+          const Text(
+            "Compared to last 3 records",
+            style: TextStyle(color: Colors.black54, fontSize: 12),
+          ),
           const SizedBox(height: 1),
           Expanded(
             child: BarChart(
@@ -522,13 +568,14 @@ class SpendingBarChartCard extends StatelessWidget {
   }
 }
 
-// Transaction History Section
 class TransactionHistorySection extends StatefulWidget {
   final List<Transaction> transactions;
+
   const TransactionHistorySection({super.key, required this.transactions});
 
   @override
-  State<TransactionHistorySection> createState() => _TransactionHistorySectionState();
+  State<TransactionHistorySection> createState() =>
+      _TransactionHistorySectionState();
 }
 
 class _TransactionHistorySectionState extends State<TransactionHistorySection> {
@@ -536,8 +583,9 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
 
   @override
   Widget build(BuildContext context) {
-    final visibleTransactions =
-    showAll ? widget.transactions : [widget.transactions.first];
+    final visibleTransactions = showAll
+        ? widget.transactions
+        : [widget.transactions.first];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,11 +593,14 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text("Transaction History",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Color(0xFF112250))),
+            const Text(
+              "Transaction History",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Color(0xFF112250),
+              ),
+            ),
             GestureDetector(
               onTap: () {
                 setState(() {
@@ -559,9 +610,10 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
               child: Text(
                 showAll ? "See Less" : "See All",
                 style: const TextStyle(
-                    color: Colors.blue,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500),
+                  color: Colors.blue,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -600,31 +652,42 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.white,
-                      child: Icon(iconData, color: iconColor),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.white,
+                        child: Icon(iconData, color: iconColor),
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(tx.title,
-                              style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF112250))),
-                          Text(tx.subtitle,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.black38)),
-                        ]),
-                  ]),
+                          Text(
+                            tx.title,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF112250),
+                            ),
+                          ),
+                          Text(
+                            tx.subtitle,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black38,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                   Text(
                     "${tx.isExpense ? "-" : "+"} ${tx.amount.toStringAsFixed(0)} ${tx.unit}",
                     style: TextStyle(
-                        color: tx.isExpense ? Colors.red : Colors.green,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14),
+                      color: tx.isExpense ? Colors.red : Colors.green,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -636,9 +699,9 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
   }
 }
 
-// Previous Usage List
 class PreviousUsageList extends StatefulWidget {
   final List<UsageData> previousUsages;
+
   const PreviousUsageList({super.key, required this.previousUsages});
 
   @override
@@ -654,8 +717,18 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
         final year = period.split("M")[0];
         final month = int.parse(period.split("M")[1]);
         final monthName = [
-          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
         ][month - 1];
         return "$monthName $year";
       } else if (period.contains("W")) {
@@ -699,8 +772,6 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
           ],
         ),
         const SizedBox(height: 12),
-
-        // Kartlar
         if (show)
           SizedBox(
             height: 170,
@@ -727,7 +798,7 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
                             color: Colors.black.withOpacity(0.05),
                             blurRadius: 6,
                             offset: const Offset(2, 3),
-                          )
+                          ),
                         ],
                       ),
                       child: Column(
@@ -744,16 +815,21 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const Divider(
-                              height: 14, thickness: 1, color: Colors.black12),
+                            height: 14,
+                            thickness: 1,
+                            color: Colors.black12,
+                          ),
 
-                          // Usage
                           Row(
                             children: [
                               CircleAvatar(
                                 radius: 12,
                                 backgroundColor: Colors.blue.withOpacity(0.15),
-                                child: const Icon(Icons.water_drop,
-                                    size: 16, color: Colors.blueAccent),
+                                child: const Icon(
+                                  Icons.water_drop,
+                                  size: 16,
+                                  color: Colors.blueAccent,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -771,14 +847,16 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
                           ),
                           const SizedBox(height: 6),
 
-                          // Bill
                           Row(
                             children: [
                               CircleAvatar(
                                 radius: 12,
                                 backgroundColor: Colors.green.withOpacity(0.15),
-                                child: const Icon(Icons.attach_money,
-                                    size: 16, color: Colors.green),
+                                child: const Icon(
+                                  Icons.attach_money,
+                                  size: 16,
+                                  color: Colors.green,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -796,15 +874,18 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
                           ),
                           const SizedBox(height: 6),
 
-                          // Goal
                           Row(
                             children: [
                               CircleAvatar(
                                 radius: 12,
-                                backgroundColor:
-                                Colors.orange.withOpacity(0.15),
-                                child: const Icon(Icons.flag,
-                                    size: 16, color: Colors.orangeAccent),
+                                backgroundColor: Colors.orange.withOpacity(
+                                  0.15,
+                                ),
+                                child: const Icon(
+                                  Icons.flag,
+                                  size: 16,
+                                  color: Colors.orangeAccent,
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(

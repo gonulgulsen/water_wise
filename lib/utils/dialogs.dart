@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
 void showSuccessDialog(
-    BuildContext context,
-    String message, {
-      VoidCallback? onOk,
-    }) {
+  BuildContext context,
+  String message, {
+  VoidCallback? onOk,
+}) {
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -17,7 +17,6 @@ void showSuccessDialog(
           clipBehavior: Clip.none,
           alignment: Alignment.topCenter,
           children: [
-            // İçerik kutusu
             Container(
               padding: const EdgeInsets.fromLTRB(20, 100, 20, 20),
               decoration: BoxDecoration(
@@ -72,7 +71,6 @@ void showSuccessDialog(
               ),
             ),
 
-            // 🔹 Üstte Lottie animasyonu
             Positioned(
               top: -60,
               child: SizedBox(

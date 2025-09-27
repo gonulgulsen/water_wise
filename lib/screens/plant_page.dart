@@ -3,20 +3,20 @@ import 'package:flutter/services.dart';
 
 class PlantPage extends StatefulWidget {
   const PlantPage({super.key});
+
   @override
   State<PlantPage> createState() => _PlantPageState();
 }
 
 class _PlantPageState extends State<PlantPage> {
-  // Palette
-  static const Color cream  = Color(0xFFD8CBC2);
-  static const Color navy   = Color(0xFF112250);
+  static const Color cream = Color(0xFFD8CBC2);
+  static const Color navy = Color(0xFF112250);
   static const Color cardBg = Color(0xFFF7F5F2);
 
-  // 1 ağaç ≈ 25 kg CO₂
   static const double co2PerTreeKg = 25.0;
 
   int _sessionCount = 1;
+
   double get _sessionCo2 => _sessionCount * co2PerTreeKg;
 
   @override
@@ -28,13 +28,16 @@ class _PlantPageState extends State<PlantPage> {
           const AssetImage('assets/images/arkaplansilinmisagac.png'),
           context,
         );
-      } catch (_) {/* ignore */}
+      } catch (_) {
+        /* ignore */
+      }
     });
   }
 
   void _onDonationConfirmed(int count) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Thanks! +$count trees donated 🌳')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Thanks! +$count trees donated 🌳')));
   }
 
   @override
@@ -51,7 +54,10 @@ class _PlantPageState extends State<PlantPage> {
         centerTitle: true,
         title: Text(
           'Plant Trees',
-          style: text.titleMedium?.copyWith(color: navy, fontWeight: FontWeight.w700),
+          style: text.titleMedium?.copyWith(
+            color: navy,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       body: SafeArea(
@@ -79,7 +85,6 @@ class _PlantPageState extends State<PlantPage> {
                 ),
                 const SizedBox(height: 8),
 
-                // Başlık
                 Column(
                   children: [
                     Text(
@@ -114,7 +119,9 @@ class _PlantPageState extends State<PlantPage> {
                     children: [
                       Text(
                         'This Donation',
-                        style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                        style: text.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -147,8 +154,6 @@ class _PlantPageState extends State<PlantPage> {
   }
 }
 
-/* ---------------- Donate Card ---------------- */
-
 class _DonationCard extends StatefulWidget {
   const _DonationCard({
     required this.initialCount,
@@ -158,8 +163,8 @@ class _DonationCard extends StatefulWidget {
   });
 
   final int initialCount;
-  final ValueChanged<int> onCountChanged; // bağış kartını canlı güncellemek için
-  final ValueChanged<int> onConfirmed;    // ödeme tamamlandığında
+  final ValueChanged<int> onCountChanged;
+  final ValueChanged<int> onConfirmed;
   final bool usePaymentSheet;
 
   @override
@@ -187,7 +192,10 @@ class _DonationCardState extends State<_DonationCard> {
 
     return Column(
       children: [
-        Text('Number of Trees', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+        Text(
+          'Number of Trees',
+          style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -226,7 +234,6 @@ class _DonationCardState extends State<_DonationCard> {
         ),
         const SizedBox(height: 14),
 
-        // Donate
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -234,7 +241,9 @@ class _DonationCardState extends State<_DonationCard> {
               backgroundColor: _PlantPageState.navy,
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: () async {
@@ -242,7 +251,9 @@ class _DonationCardState extends State<_DonationCard> {
 
               if (!widget.usePaymentSheet) {
                 widget.onConfirmed(_count);
-                messenger.showSnackBar(const SnackBar(content: Text('Donation completed 🌳')));
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Donation completed 🌳')),
+                );
                 return;
               }
 
@@ -251,7 +262,9 @@ class _DonationCardState extends State<_DonationCard> {
 
               if (ok == true) {
                 widget.onConfirmed(_count);
-                messenger.showSnackBar(const SnackBar(content: Text('Donation completed 🌳')));
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Donation completed 🌳')),
+                );
               }
             },
             child: const Text('Donate'),
@@ -273,16 +286,17 @@ class _DonationCardState extends State<_DonationCard> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _PaymentSheet(amountText: amountText, navy: _PlantPageState.navy),
+      builder: (ctx) =>
+          _PaymentSheet(amountText: amountText, navy: _PlantPageState.navy),
     );
   }
 }
 
-/* ---------------- small widgets ---------------- */
-
 class _BeigeCard extends StatelessWidget {
   const _BeigeCard({required this.child});
+
   final Widget child;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -292,7 +306,11 @@ class _BeigeCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE8E2DA)),
         boxShadow: const [
-          BoxShadow(color: Color(0x14000000), blurRadius: 10, offset: Offset(0, 6)),
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 10,
+            offset: Offset(0, 6),
+          ),
         ],
       ),
       child: child,
@@ -302,8 +320,10 @@ class _BeigeCard extends StatelessWidget {
 
 class _RoundBtn extends StatelessWidget {
   const _RoundBtn({required this.icon, required this.onTap});
+
   final IconData icon;
   final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -322,9 +342,9 @@ class _RoundBtn extends StatelessWidget {
   }
 }
 
-/* ------------- Payment Bottom Sheet ------------- */
 class _PaymentSheet extends StatefulWidget {
   const _PaymentSheet({required this.amountText, required this.navy});
+
   final String amountText;
   final Color navy;
 
@@ -333,19 +353,14 @@ class _PaymentSheet extends StatefulWidget {
 }
 
 class _PaymentSheetState extends State<_PaymentSheet> {
-  // --- DEMO Saved Cards (in-memory) ---
-  final List<String> _savedCards = [
-    'Visa •••• 1234',
-    'Mastercard •••• 5678',
-  ];
+  final List<String> _savedCards = ['Visa •••• 1234', 'Mastercard •••• 5678'];
   String? _selectedSaved;
 
-  // --- New card form controllers ---
   final _ctrlName = TextEditingController();
-  final _ctrlNum  = TextEditingController();
-  final _ctrlExp  = TextEditingController();
-  final _ctrlCvc  = TextEditingController();
-  final _formKey  = GlobalKey<FormState>();
+  final _ctrlNum = TextEditingController();
+  final _ctrlExp = TextEditingController();
+  final _ctrlCvc = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _saveThisCard = false;
 
   @override
@@ -377,9 +392,15 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                 children: [
                   const SizedBox(width: 4),
                   const Expanded(
-                    child: Text('Donate',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      'Donate',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context, false),
@@ -388,13 +409,19 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                 ],
               ),
               const SizedBox(height: 6),
-              Text('You are donating for ${widget.amountText}.',
-                  textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+              Text(
+                'You are donating for ${widget.amountText}.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70),
+              ),
               const SizedBox(height: 12),
 
               // ---------- Saved cards ----------
               if (_savedCards.isNotEmpty) ...[
-                const Text('Saved cards', style: TextStyle(color: Colors.white70)),
+                const Text(
+                  'Saved cards',
+                  style: TextStyle(color: Colors.white70),
+                ),
                 const SizedBox(height: 8),
                 for (final card in _savedCards)
                   RadioListTile<String>(
@@ -411,15 +438,23 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                       });
                     },
                     activeColor: Colors.white,
-                    title: Text(card, style: const TextStyle(color: Colors.white)),
-                    subtitle: const Text('Use this card', style: TextStyle(color: Colors.white54)),
+                    title: Text(
+                      card,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Use this card',
+                      style: TextStyle(color: Colors.white54),
+                    ),
                   ),
                 const Divider(color: Colors.white24),
               ],
 
-              // ---------- New card entry ----------
               const SizedBox(height: 6),
-              const Text('Or enter a new card', style: TextStyle(color: Colors.white70)),
+              const Text(
+                'Or enter a new card',
+                style: TextStyle(color: Colors.white70),
+              ),
               const SizedBox(height: 8),
 
               Form(
@@ -431,8 +466,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                       label: 'Card holder',
                       enabled: _selectedSaved == null,
                       validator: (v) {
-                        if (_selectedSaved != null) return null; // saved seçiliyse valide etme
-                        if (v == null || v.trim().length < 3) return 'Enter a name';
+                        if (_selectedSaved != null)
+                          return null; // saved seçiliyse valide etme
+                        if (v == null || v.trim().length < 3)
+                          return 'Enter a name';
                         return null;
                       },
                     ),
@@ -442,7 +479,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                       label: 'Card number',
                       enabled: _selectedSaved == null,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly, _CardNumberFormatter()],
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        _CardNumberFormatter(),
+                      ],
                       validator: (v) {
                         if (_selectedSaved != null) return null;
                         final digits = (v ?? '').replaceAll(RegExp(r'\D'), '');
@@ -459,7 +499,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                             label: 'MM/YY',
                             enabled: _selectedSaved == null,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly, _CardExpFormatter()],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              _CardExpFormatter(),
+                            ],
                             validator: (v) {
                               if (_selectedSaved != null) return null;
                               if (v == null || !v.contains('/')) return 'MM/YY';
@@ -479,7 +522,9 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                             label: 'CVC',
                             enabled: _selectedSaved == null,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             validator: (v) {
                               if (_selectedSaved != null) return null;
                               if (v == null || v.length < 3) return 'CVC';
@@ -495,11 +540,15 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                         Checkbox(
                           value: _saveThisCard,
                           onChanged: _selectedSaved == null
-                              ? (v) => setState(() => _saveThisCard = v ?? false)
+                              ? (v) =>
+                                    setState(() => _saveThisCard = v ?? false)
                               : null,
                         ),
                         const SizedBox(width: 6),
-                        const Text('Save this card for demo', style: TextStyle(color: Colors.white70)),
+                        const Text(
+                          'Save this card for demo',
+                          style: TextStyle(color: Colors.white70),
+                        ),
                       ],
                     ),
 
@@ -510,32 +559,39 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: widget.navy,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         onPressed: () {
-                          // 1) saved card seçiliyse direkt başarı
                           if (_selectedSaved != null) {
                             Navigator.pop(context, true);
                             return;
                           }
-                          // 2) yeni kart: önce validate et
                           if (_formKey.currentState?.validate() != true) return;
 
-                          // demo: kaydet checkbox'ı işaretliyse maskeleyip listeye ekle
                           if (_saveThisCard) {
-                            final digits = _ctrlNum.text.replaceAll(RegExp(r'\D'), '');
-                            final last4 = digits.length >= 4 ? digits.substring(digits.length - 4) : digits;
+                            final digits = _ctrlNum.text.replaceAll(
+                              RegExp(r'\D'),
+                              '',
+                            );
+                            final last4 = digits.length >= 4
+                                ? digits.substring(digits.length - 4)
+                                : digits;
                             setState(() {
                               final masked = 'Card •••• $last4';
                               _savedCards.add(masked);
-                              _selectedSaved = masked; // anında seçili yap
+                              _selectedSaved = masked;
                             });
                           }
 
-                          Navigator.pop(context, true); // ödeme başarılı simülasyonu
+                          Navigator.pop(context, true);
                         },
-                        child: const Text('Pay', style: TextStyle(fontWeight: FontWeight.w700)),
+                        child: const Text(
+                          'Pay',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ),
                     ),
                   ],
@@ -555,7 +611,6 @@ class _PaymentSheetState extends State<_PaymentSheet> {
     );
   }
 
-  // --- helpers ---
   static Widget _whiteField({
     required TextEditingController controller,
     required String label,
@@ -576,7 +631,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
         labelStyle: const TextStyle(color: Colors.white70),
         filled: true,
         fillColor: enabled ? Colors.white10 : Colors.white10.withOpacity(.4),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.white24),
@@ -596,7 +654,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
 
 class _CardNumberFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
     final buf = StringBuffer();
     for (var i = 0; i < digits.length; i++) {
@@ -604,13 +665,19 @@ class _CardNumberFormatter extends TextInputFormatter {
       buf.write(digits[i]);
     }
     final t = buf.toString();
-    return TextEditingValue(text: t, selection: TextSelection.collapsed(offset: t.length));
+    return TextEditingValue(
+      text: t,
+      selection: TextSelection.collapsed(offset: t.length),
+    );
   }
 }
 
 class _CardExpFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     var d = newValue.text.replaceAll(RegExp(r'\D'), '');
     if (d.length > 4) d = d.substring(0, 4);
     String f;
@@ -619,15 +686,20 @@ class _CardExpFormatter extends TextInputFormatter {
     } else {
       f = d;
     }
-    return TextEditingValue(text: f, selection: TextSelection.collapsed(offset: f.length));
+    return TextEditingValue(
+      text: f,
+      selection: TextSelection.collapsed(offset: f.length),
+    );
   }
 }
 
-
-/* ---------- Saved Card Tile ---------- */
-
 class _SavedCardTile extends StatelessWidget {
-  const _SavedCardTile({required this.card, required this.selected, required this.onTap});
+  const _SavedCardTile({
+    required this.card,
+    required this.selected,
+    required this.onTap,
+  });
+
   final _SavedCard card;
   final bool selected;
   final VoidCallback onTap;
@@ -653,9 +725,15 @@ class _SavedCardTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${card.brand} ${card.masked}', style: const TextStyle(color: Colors.white)),
+                  Text(
+                    '${card.brand} ${card.masked}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
                   const SizedBox(height: 2),
-                  Text(card.holder, style: const TextStyle(color: Colors.white70)),
+                  Text(
+                    card.holder,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
                 ],
               ),
             ),
@@ -668,17 +746,25 @@ class _SavedCardTile extends StatelessWidget {
 
 class _RadioCircle extends StatelessWidget {
   const _RadioCircle({required this.selected});
+
   final bool selected;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 20, height: 20,
-      decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2),
+      ),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.all(3),
-        decoration: BoxDecoration(shape: BoxShape.circle, color: selected ? Colors.white : Colors.transparent),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: selected ? Colors.white : Colors.transparent,
+        ),
       ),
     );
   }
@@ -686,6 +772,7 @@ class _RadioCircle extends StatelessWidget {
 
 class _EmptyBox extends StatelessWidget {
   final String message;
+
   const _EmptyBox({required this.message});
 
   @override
@@ -698,7 +785,11 @@ class _EmptyBox extends StatelessWidget {
         border: Border.all(color: Colors.white24),
       ),
       child: Center(
-        child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70)),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white70),
+        ),
       ),
     );
   }
@@ -708,5 +799,6 @@ class _SavedCard {
   final String masked;
   final String holder;
   final String brand;
+
   _SavedCard({required this.masked, required this.holder, required this.brand});
 }

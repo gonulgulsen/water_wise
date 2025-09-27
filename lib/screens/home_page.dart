@@ -28,10 +28,7 @@ class _HomePageState extends State<HomePage> {
       final screen = MediaQuery.of(context).size;
       const fabW = 110.0;
       const fabH = 40.0;
-      fabPosition = Offset(
-          screen.width - fabW - 16,
-          16,
-      );
+      fabPosition = Offset(screen.width - fabW - 16, 16);
     }
   }
 
@@ -73,7 +70,6 @@ class _HomePageState extends State<HomePage> {
       context,
     ).showSnackBar(const SnackBar(content: Text("Usage saved successfully!")));
 
-    // formu temizle
     _litersCtrl.clear();
     _weeklyCtrl.clear();
     _billCtrl.clear();
@@ -114,7 +110,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Monthly Consumption
                   TextField(
                     controller: _litersCtrl,
                     keyboardType: TextInputType.number,
@@ -123,7 +118,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Weekly Consumption
                   TextField(
                     controller: _weeklyCtrl,
                     keyboardType: TextInputType.number,
@@ -132,7 +126,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Bill
                   TextField(
                     controller: _billCtrl,
                     keyboardType: TextInputType.number,
@@ -141,7 +134,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Goal
                   TextField(
                     controller: _goalCtrl,
                     keyboardType: TextInputType.number,
@@ -150,7 +142,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 18),
 
-                  // Submit button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -307,7 +298,6 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Comparison
                       StreamBuilder<QuerySnapshot>(
                         stream: FirebaseFirestore.instance
                             .collection("usages")
@@ -355,44 +345,43 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
 
-                  // FAB (taşınabilir)
                   if (fabPosition != null)
-                  Positioned(
-                    left: fabPosition!.dx,
-                    top: fabPosition!.dy,
-                    child: GestureDetector(
-                      onPanUpdate: (details) {
-                        setState(() {
-                          final screen = MediaQuery.of(context).size;
-                          const fabW = 110.0;
-                          const fabH = 40.0;
-                          double newX = fabPosition!.dx + details.delta.dx;
-                          double newY = fabPosition!.dy + details.delta.dy;
-                          if (newX < 0) newX = 0;
-                          if (newY < 0) newY = 0;
-                          if (newX > screen.width - fabW)
-                            newX = screen.width - fabW;
-                          if (newY > screen.height - fabH - 100) {
-                            newY = screen.height - fabH - 100;
-                          }
-                          fabPosition = Offset(newX, newY);
-                        });
-                      },
-                      child: FloatingActionButton.extended(
-                        backgroundColor: const Color(0xFFC30B0E),
-                        foregroundColor: const Color(0xFFD8CBC2),
-                        onPressed: _openUsageSheet,
-                        icon: const Icon(Icons.add),
-                        label: const Text(
-                          "Usage",
-                          style: TextStyle(
-                            color: Color(0xFFD8CBC2),
-                            fontWeight: FontWeight.bold,
+                    Positioned(
+                      left: fabPosition!.dx,
+                      top: fabPosition!.dy,
+                      child: GestureDetector(
+                        onPanUpdate: (details) {
+                          setState(() {
+                            final screen = MediaQuery.of(context).size;
+                            const fabW = 110.0;
+                            const fabH = 40.0;
+                            double newX = fabPosition!.dx + details.delta.dx;
+                            double newY = fabPosition!.dy + details.delta.dy;
+                            if (newX < 0) newX = 0;
+                            if (newY < 0) newY = 0;
+                            if (newX > screen.width - fabW)
+                              newX = screen.width - fabW;
+                            if (newY > screen.height - fabH - 100) {
+                              newY = screen.height - fabH - 100;
+                            }
+                            fabPosition = Offset(newX, newY);
+                          });
+                        },
+                        child: FloatingActionButton.extended(
+                          backgroundColor: const Color(0xFFC30B0E),
+                          foregroundColor: const Color(0xFFD8CBC2),
+                          onPressed: _openUsageSheet,
+                          icon: const Icon(Icons.add),
+                          label: const Text(
+                            "Usage",
+                            style: TextStyle(
+                              color: Color(0xFFD8CBC2),
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -403,7 +392,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// Comparison Card
 class ComparisonCard extends StatelessWidget {
   final double current;
   final double previous;
@@ -470,7 +458,6 @@ class ComparisonCard extends StatelessWidget {
   }
 }
 
-// Goal Progress Card
 class GoalProgressCard extends StatelessWidget {
   final double liters;
   final double goal;
@@ -520,7 +507,6 @@ class GoalProgressCard extends StatelessWidget {
   }
 }
 
-// Daily Tip Card
 class DailyTipCard extends StatefulWidget {
   const DailyTipCard({super.key});
 
@@ -582,9 +568,9 @@ class _DailyTipCardState extends State<DailyTipCard> {
   }
 }
 
-// Reservoir Pie Chart
 class ReservoirPieChart extends StatelessWidget {
   final String city;
+
   const ReservoirPieChart({super.key, required this.city});
 
   @override

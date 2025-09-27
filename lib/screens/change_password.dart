@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../utils/snackbar.dart';
 
 class ChangePassword extends StatefulWidget {
@@ -34,19 +33,16 @@ class _ChangePasswordState extends State<ChangePassword> {
     }
 
     try {
-      // Reauthenticate
       final cred = EmailAuthProvider.credential(
         email: user.email!,
         password: _currentPasswordCtrl.text,
       );
       await user.reauthenticateWithCredential(cred);
 
-      // Update password
       await user.updatePassword(_newPasswordCtrl.text);
 
       showSuccessMessage(context, "Password changed successfully!");
       Navigator.pop(context);
-
     } on FirebaseAuthException catch (e) {
       String message = "An error occurred";
       if (e.code == "wrong-password") {
@@ -119,8 +115,9 @@ class _ChangePasswordState extends State<ChangePassword> {
                   color: Colors.grey,
                 ),
                 onPressed: () {
-                  setState(() =>
-                  _obscureConfirmPassword = !_obscureConfirmPassword);
+                  setState(
+                    () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                  );
                 },
               ),
             ),
@@ -139,7 +136,7 @@ class _ChangePasswordState extends State<ChangePassword> {
                 onPressed: _changePassword,
                 child: const Text("Change Password"),
               ),
-            )
+            ),
           ],
         ),
       ),

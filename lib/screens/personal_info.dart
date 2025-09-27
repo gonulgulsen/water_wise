@@ -52,81 +52,84 @@ class _PersonalInfoState extends State<PersonalInfo> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF112250)),
-          onPressed: () => Navigator.pop(context), // 🔹 Profile sayfasına geri döner
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: userData == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // Avatar + İsim + Şehir
-          Row(
-            children: [
-              const CircleAvatar(
-                radius: 40,
-                backgroundImage: AssetImage("assets/images/avatar.jpg"),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "${userData!['name']} ${userData!['surname']}",
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF112250),
+              padding: const EdgeInsets.all(20),
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 40,
+                      backgroundImage: AssetImage("assets/images/avatar.jpg"),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "${userData!['city']}, ${userData!['district']}",
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.black54,
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "${userData!['name']} ${userData!['surname']}",
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF112250),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "${userData!['city']}, ${userData!['district']}",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                  ],
+                ),
 
-          const SizedBox(height: 30),
-          const Divider(color: Color(0xFF11225050)),
+                const SizedBox(height: 30),
+                const Divider(color: Color(0xFF11225050)),
 
-          _infoTile(
-            icon: Icons.phone,
-            label: "Telephone",
-            value: userData!['telephone'] ?? "-",
-          ),
-          const Divider(color: Color(0xFF11225050)),
+                _infoTile(
+                  icon: Icons.phone,
+                  label: "Telephone",
+                  value: userData!['telephone'] ?? "-",
+                ),
+                const Divider(color: Color(0xFF11225050)),
 
-          _infoTile(
-            icon: Icons.location_city,
-            label: "City",
-            value: userData!['city'] ?? "-",
-          ),
-          const Divider(color: Color(0xFF11225050)),
+                _infoTile(
+                  icon: Icons.location_city,
+                  label: "City",
+                  value: userData!['city'] ?? "-",
+                ),
+                const Divider(color: Color(0xFF11225050)),
 
-          _infoTile(
-            icon: Icons.map,
-            label: "District",
-            value: userData!['district'] ?? "-",
-          ),
-          const Divider(color: Color(0xFF11225050)),
+                _infoTile(
+                  icon: Icons.map,
+                  label: "District",
+                  value: userData!['district'] ?? "-",
+                ),
+                const Divider(color: Color(0xFF11225050)),
 
-          _infoTile(
-            icon: Icons.home,
-            label: "Neighborhood",
-            value: userData!['neighborhood'] ?? "-",
-          ),
-        ],
-      ),
+                _infoTile(
+                  icon: Icons.home,
+                  label: "Neighborhood",
+                  value: userData!['neighborhood'] ?? "-",
+                ),
+              ],
+            ),
     );
   }
 
-  Widget _infoTile({required IconData icon, required String label, required String value}) {
+  Widget _infoTile({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF3C5070)),
       title: Text(
@@ -136,10 +139,7 @@ class _PersonalInfoState extends State<PersonalInfo> {
           color: Color(0xFF112250),
         ),
       ),
-      subtitle: Text(
-        value,
-        style: const TextStyle(color: Colors.black87),
-      ),
+      subtitle: Text(value, style: const TextStyle(color: Colors.black87)),
     );
   }
 }

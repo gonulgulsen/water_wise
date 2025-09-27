@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'login_page.dart';
-import '../utils/snackbar.dart'; // ✅ snackbarları ekledik
+import '../utils/snackbar.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -19,7 +19,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool pushNotifications = true;
   Map<String, dynamic>? userData;
 
-  final user = FirebaseAuth.instance.currentUser; // login olan kullanıcı
+  final user = FirebaseAuth.instance.currentUser;
 
   @override
   void initState() {

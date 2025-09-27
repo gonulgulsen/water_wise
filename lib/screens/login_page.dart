@@ -93,10 +93,7 @@ class _LoginPageState extends State<LoginPage> {
                     const Text(
                       "Welcome back! You are now logged in.",
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF3C5070),
-                      ),
+                      style: TextStyle(fontSize: 16, color: Color(0xFF3C5070)),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
@@ -179,7 +176,6 @@ class _LoginPageState extends State<LoginPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  // Logo
                   Column(
                     children: [
                       Image.asset(
@@ -200,7 +196,6 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
 
-                  // Email
                   TextFormField(
                     controller: _emailController,
                     style: const TextStyle(color: Color(0xFFD8CBC2)),
@@ -218,7 +213,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Password
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
@@ -288,16 +282,16 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       child: _isLoading
                           ? const CircularProgressIndicator(
-                        color: Color(0xFF112250),
-                      )
+                              color: Color(0xFF112250),
+                            )
                           : const Text(
-                        "LOGIN",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF112250),
-                        ),
-                      ),
+                              "LOGIN",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF112250),
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 20),

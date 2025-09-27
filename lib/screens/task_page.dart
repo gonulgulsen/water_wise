@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
 class TaskPage extends StatefulWidget {
   const TaskPage({super.key});
 
@@ -18,7 +17,10 @@ class _TaskPageState extends State<TaskPage> {
 
   String selectedCategory = "Indoor";
   String selectedTab = "today";
-  int _hoveredIndex = -1;
+  int _hoveredCompleteIndex = -1;
+  int _hoveredDeleteIndex = -1;
+  int _pressedCompleteIndex = -1;
+  int _pressedDeleteIndex = -1;
 
   String? fullName;
 
@@ -40,7 +42,7 @@ class _TaskPageState extends State<TaskPage> {
     if (doc.exists) {
       final data = doc.data()!;
       final firstName = data["name"] ?? "";
-      final lastName  = data["surname"] ?? "";
+      final lastName = data["surname"] ?? "";
       setState(() {
         fullName = "$firstName $lastName".trim();
       });
@@ -345,27 +347,109 @@ class _TaskPageState extends State<TaskPage> {
                                       ],
                                     ),
 
-                                    MouseRegion(
-                                      cursor: SystemMouseCursors.click,
-                                      onEnter: (_) =>
-                                          setState(() => _hoveredIndex = index),
-                                      onExit: (_) =>
-                                          setState(() => _hoveredIndex = -1),
-                                      child: GestureDetector(
-                                        onTap: () async {
-                                          await FirebaseFirestore.instance
-                                              .collection("tasks")
-                                              .doc(docs[index].id)
-                                              .delete();
-                                        },
-                                        child: Icon(
-                                          Icons.delete,
-                                          size: 18,
-                                          color: _hoveredIndex == index
-                                              ? Colors.grey.shade800
-                                              : Colors.grey,
+                                    Row(
+                                      children: [
+                                        Row(
+                                          children: [
+                                            if (selectedTab != "completed")
+                                              InkWell(
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                splashColor: Colors.transparent,
+                                                highlightColor:
+                                                    Colors.transparent,
+                                                onHover: (h) => setState(
+                                                  () => _hoveredCompleteIndex =
+                                                      h ? index : -1,
+                                                ),
+                                                onTapDown: (_) => setState(
+                                                  () => _pressedCompleteIndex =
+                                                      index,
+                                                ),
+                                                onTapCancel: () => setState(
+                                                  () => _pressedCompleteIndex =
+                                                      -1,
+                                                ),
+                                                onTapUp: (_) => setState(
+                                                  () => _pressedCompleteIndex =
+                                                      -1,
+                                                ),
+                                                onTap: () async {
+                                                  await FirebaseFirestore
+                                                      .instance
+                                                      .collection("tasks")
+                                                      .doc(docs[index].id)
+                                                      .update({
+                                                        "status": "completed",
+                                                      });
+                                                },
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.check_circle,
+                                                    size: 22,
+                                                    color:
+                                                        (_hoveredCompleteIndex ==
+                                                                index ||
+                                                            _pressedCompleteIndex ==
+                                                                index)
+                                                        ? Colors.green
+                                                        : Colors.grey,
+                                                  ),
+                                                ),
+                                              ),
+
+                                            const SizedBox(width: 12),
+
+                                            InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              splashColor: Colors.transparent,
+                                              highlightColor:
+                                                  Colors.transparent,
+                                              onHover: (h) => setState(
+                                                () => _hoveredDeleteIndex = h
+                                                    ? index
+                                                    : -1,
+                                              ),
+                                              onTapDown: (_) => setState(
+                                                () =>
+                                                    _pressedDeleteIndex = index,
+                                              ),
+                                              onTapCancel: () => setState(
+                                                () => _pressedDeleteIndex = -1,
+                                              ),
+                                              onTapUp: (_) => setState(
+                                                () => _pressedDeleteIndex = -1,
+                                              ),
+                                              onTap: () async {
+                                                await FirebaseFirestore.instance
+                                                    .collection("tasks")
+                                                    .doc(docs[index].id)
+                                                    .delete();
+                                              },
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(
+                                                  4,
+                                                ),
+                                                child: Icon(
+                                                  Icons.delete,
+                                                  size: 20,
+                                                  color:
+                                                      (_hoveredDeleteIndex ==
+                                                              index ||
+                                                          _pressedDeleteIndex ==
+                                                              index)
+                                                      ? Colors.red
+                                                      : Colors.grey,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ],
                                 ),

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:intl/intl.dart';
+import 'dart:ui';
 
 // Transaction modeli
 class Transaction {
@@ -10,43 +11,46 @@ class Transaction {
   final String subtitle;
   final double amount;
   final bool isExpense;
-  final String unit; // $, L gibi birim
+  final String unit;
 
   Transaction({
     required this.title,
     required this.subtitle,
     required this.amount,
     this.isExpense = true,
-    this.unit = "\$", // varsayılan para
+    this.unit = "\$",
   });
 }
 
 // UsageData Model
 class UsageData {
   final String userId;
-  final int goal;
-  final int weeklyLiters;
-  final int monthlyLiters;
-  final int billMonthly;
-  final String week;
+  final String type;
+  final String period;
+  final double liters;
+  final double weeklyLiters;
+  final double billMonthly;
+  final double goal;
 
   UsageData({
     required this.userId,
-    required this.goal,
+    required this.type,
+    required this.period,
+    required this.liters,
     required this.weeklyLiters,
-    required this.monthlyLiters,
     required this.billMonthly,
-    required this.week,
+    required this.goal,
   });
 
   factory UsageData.fromMap(Map<String, dynamic> data) {
     return UsageData(
       userId: data['userId'] ?? '',
-      goal: data['goal'] ?? 0,
-      weeklyLiters: data['weeklyLiters'] ?? 0,
-      monthlyLiters: data['monthlyLiters'] ?? 0,
-      billMonthly: int.tryParse(data['billMonthly'].toString()) ?? 0,
-      week: data['week'] ?? '',
+      type: data['type'] ?? '',
+      period: data['period'] ?? '',
+      liters: (data['monthlyLiters'] ?? data['liters'] ?? 0).toDouble(),
+      weeklyLiters: (data['weeklyLiters'] ?? 0).toDouble(),
+      billMonthly: (data['billMonthly'] ?? 0).toDouble(),
+      goal: (data['goal'] ?? 0).toDouble(),
     );
   }
 }
@@ -60,39 +64,6 @@ class UsagePage extends StatefulWidget {
 
 class _UsagePageState extends State<UsagePage> {
   bool isWeekly = true;
-
-  final weeklyLineData = const [
-    FlSpot(0, 50),
-    FlSpot(1, 120),
-    FlSpot(2, 90),
-    FlSpot(3, 150),
-    FlSpot(4, 500),
-    FlSpot(5, 140),
-    FlSpot(6, 140),
-  ];
-  final monthlyLineData = const [
-    FlSpot(0, 600),
-    FlSpot(1, 1200),
-    FlSpot(2, 1800),
-    FlSpot(3, 1500),
-  ];
-  final lineLabelsWeekly = const ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  final lineLabelsMonthly = const ["W1", "W2", "W3", "W4"];
-
-  final weeklyBarData = [
-    BarChartGroupData(x: 0, barRods: [
-      BarChartRodData(toY: 50, color: Colors.cyan, width: 8),
-      BarChartRodData(toY: 40, color: Colors.orange, width: 8),
-    ]),
-  ];
-  final monthlyBarData = [
-    BarChartGroupData(x: 0, barRods: [
-      BarChartRodData(toY: 150, color: Colors.cyan, width: 8),
-      BarChartRodData(toY: 100, color: Colors.orange, width: 8),
-    ]),
-  ];
-  final barLabelsWeekly = const ["Sun", "Mon"];
-  final barLabelsMonthly = const ["Jan", "Feb"];
 
   String get currentUserId {
     final user = FirebaseAuth.instance.currentUser;
@@ -108,7 +79,8 @@ class _UsagePageState extends State<UsagePage> {
           stream: FirebaseFirestore.instance
               .collection("usages")
               .where("userId", isEqualTo: currentUserId)
-              .limit(1)
+              .orderBy("date", descending: true)
+              .limit(5)
               .snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
@@ -118,36 +90,29 @@ class _UsagePageState extends State<UsagePage> {
               return const Center(child: Text("No usage data found"));
             }
 
-            final doc = snapshot.data!.docs.first;
-            final usageData = UsageData.fromMap(doc.data() as Map<String, dynamic>);
-
+            final docs = snapshot.data!.docs;
+            final current = UsageData.fromMap(docs.first.data() as Map<String, dynamic>);
+            final previous = docs.skip(1).map((d) => UsageData.fromMap(d.data() as Map<String, dynamic>)).toList();
 
             final transactions = [
               Transaction(
                 title: "Bill",
                 subtitle: "This month's water bill",
-                amount: usageData.billMonthly.toDouble(),
+                amount: current.billMonthly,
                 isExpense: true,
-                unit: "\$",
+                unit: "₺",
               ),
               Transaction(
                 title: "Usage",
-                subtitle: "Weekly liters consumed",
-                amount: usageData.weeklyLiters.toDouble(),
-                isExpense: true,
-                unit: "L",
-              ),
-              Transaction(
-                title: "Usage",
-                subtitle: "Monthly liters consumed",
-                amount: usageData.monthlyLiters.toDouble(),
+                subtitle: isWeekly ? "Weekly liters consumed" : "Monthly liters consumed",
+                amount: isWeekly ? current.weeklyLiters : current.liters,
                 isExpense: true,
                 unit: "L",
               ),
               Transaction(
                 title: "Goal",
                 subtitle: "Your saving target",
-                amount: usageData.goal.toDouble(),
+                amount: current.goal,
                 isExpense: false,
                 unit: "L",
               ),
@@ -158,7 +123,6 @@ class _UsagePageState extends State<UsagePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
                   UsageHeader(
                     isWeekly: isWeekly,
                     onToggle: (value) {
@@ -166,11 +130,9 @@ class _UsagePageState extends State<UsagePage> {
                         isWeekly = value;
                       });
                     },
-                    usageData: usageData,
+                    usageData: current,
                   ),
                   const SizedBox(height: 16),
-
-                  // Grafik kartları
                   Expanded(
                     child: ListView(
                       children: [
@@ -183,12 +145,12 @@ class _UsagePageState extends State<UsagePage> {
                                 width: 320,
                                 child: CustomLineChartCard(
                                   title: "Water Usage",
-                                  data: isWeekly ? weeklyLineData : monthlyLineData,
-                                  labels: isWeekly ? lineLabelsWeekly : lineLabelsMonthly,
+                                  data: _buildLineChartData(docs.take(3).toList(), isWeekly),
+                                  labels: _buildLabels(docs.take(3).toList()),
                                   usageText: isWeekly
-                                      ? "You used ${usageData.weeklyLiters} L this week."
-                                      : "You used ${usageData.monthlyLiters} L this month.",
-                                  goalText: "GOAL: ${usageData.goal} L",
+                                      ? "You used ${current.weeklyLiters} L this week."
+                                      : "You used ${current.liters} L this month.",
+                                  goalText: "GOAL: ${current.goal} L",
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -196,20 +158,22 @@ class _UsagePageState extends State<UsagePage> {
                                 width: 320,
                                 child: SpendingBarChartCard(
                                   title: "Your spending",
-                                  data: isWeekly ? weeklyBarData : monthlyBarData,
-                                  labels: isWeekly ? barLabelsWeekly : barLabelsMonthly,
-                                  spendingText:
-                                  "You spent \$${usageData.billMonthly} this month.",
+                                  data: _buildBarChartData(docs.take(3).toList()),
+                                  labels: _buildLabels(docs.take(3).toList()),
+                                  spendingText: "You spent ₺${current.billMonthly} this month.",
                                 ),
                               ),
                             ],
                           ),
                         ),
-
                         const SizedBox(height: 16),
 
                         // Transaction History Section
                         TransactionHistorySection(transactions: transactions),
+                        const SizedBox(height: 5),
+
+                        // Previous Usage Grid
+                        if (previous.isNotEmpty) PreviousUsageList(previousUsages: previous),
                       ],
                     ),
                   ),
@@ -220,6 +184,36 @@ class _UsagePageState extends State<UsagePage> {
         ),
       ),
     );
+  }
+
+  // Helpers
+  List<FlSpot> _buildLineChartData(List<QueryDocumentSnapshot> docs, bool weekly) {
+    final reversed = docs.reversed.toList();
+    return List.generate(reversed.length, (i) {
+      final data = UsageData.fromMap(reversed[i].data() as Map<String, dynamic>);
+      return FlSpot(i.toDouble(), weekly ? data.weeklyLiters : data.liters);
+    });
+  }
+
+  List<BarChartGroupData> _buildBarChartData(List<QueryDocumentSnapshot> docs) {
+    final reversed = docs.reversed.toList();
+    return List.generate(reversed.length, (i) {
+      final data = UsageData.fromMap(reversed[i].data() as Map<String, dynamic>);
+      return BarChartGroupData(
+        x: i,
+        barRods: [
+          BarChartRodData(toY: data.billMonthly, color: Colors.cyan, width: 12),
+        ],
+      );
+    });
+  }
+
+  List<String> _buildLabels(List<QueryDocumentSnapshot> docs) {
+    final reversed = docs.reversed.toList();
+    return List.generate(reversed.length, (i) {
+      final data = UsageData.fromMap(reversed[i].data() as Map<String, dynamic>);
+      return data.period;
+    });
   }
 }
 
@@ -256,7 +250,6 @@ class UsageHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        // Toggle
         Container(
           decoration: BoxDecoration(
             color: const Color(0xFF2A3D5F),
@@ -311,7 +304,7 @@ class UsageHeader extends StatelessWidget {
         Text(
           isWeekly
               ? "You used ${usageData.weeklyLiters} L this week."
-              : "You used ${usageData.monthlyLiters} L this month.",
+              : "You used ${usageData.liters} L this month.",
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
@@ -344,6 +337,18 @@ class CustomLineChartCard extends StatelessWidget {
     required this.usageText,
     required this.goalText,
   });
+
+  String _formatPeriod(String period) {
+    if (period.contains("W")) {
+      final week = int.tryParse(period.substring(5)) ?? 0;
+      return "W$week";
+    } else if (period.contains("M")) {
+      final year = int.tryParse(period.substring(0, 4)) ?? DateTime.now().year;
+      final month = int.tryParse(period.substring(5)) ?? 1;
+      return DateFormat.MMM().format(DateTime(year, month));
+    }
+    return period;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -382,8 +387,15 @@ class CustomLineChartCard extends StatelessWidget {
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
                         if (value >= 0 && value < labels.length) {
-                          return Text(labels[value.toInt()],
-                              style: const TextStyle(fontSize: 12));
+                          final raw = labels[value.toInt()];
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              _formatPeriod(raw),
+                              style: const TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.w500),
+                            ),
+                          );
                         }
                         return const SizedBox.shrink();
                       },
@@ -424,6 +436,18 @@ class SpendingBarChartCard extends StatelessWidget {
     required this.spendingText,
   });
 
+  String formatPeriod(String period) {
+    if (period.contains("W")) {
+      final week = int.tryParse(period.substring(5)) ?? 0;
+      return "W$week";
+    } else if (period.contains("M")) {
+      final year = int.tryParse(period.substring(0, 4)) ?? DateTime.now().year;
+      final month = int.tryParse(period.substring(5)) ?? 1;
+      return DateFormat.MMM().format(DateTime(year, month));
+    }
+    return period;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -437,7 +461,9 @@ class SpendingBarChartCard extends StatelessWidget {
         children: [
           Text(title,
               style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3c5070))),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF3c5070))),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -445,11 +471,13 @@ class SpendingBarChartCard extends StatelessWidget {
               const SizedBox(width: 6),
               Text(spendingText,
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14, color: Colors.green)),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.green)),
             ],
           ),
           const SizedBox(height: 4),
-          const Text("Compared to last period",
+          const Text("Compared to last 3 records",
               style: TextStyle(color: Colors.black54, fontSize: 12)),
           const SizedBox(height: 1),
           Expanded(
@@ -460,14 +488,27 @@ class SpendingBarChartCard extends StatelessWidget {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
+                      reservedSize: 34,
                       getTitlesWidget: (value, meta) {
                         if (value >= 0 && value < labels.length) {
-                          return Text(labels[value.toInt()],
-                              style: const TextStyle(fontSize: 12));
+                          final label = formatPeriod(labels[value.toInt()]);
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              label,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          );
                         }
                         return const SizedBox.shrink();
                       },
                     ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: true, reservedSize: 40),
                   ),
                 ),
                 borderData: FlBorderData(show: false),
@@ -487,8 +528,7 @@ class TransactionHistorySection extends StatefulWidget {
   const TransactionHistorySection({super.key, required this.transactions});
 
   @override
-  State<TransactionHistorySection> createState() =>
-      _TransactionHistorySectionState();
+  State<TransactionHistorySection> createState() => _TransactionHistorySectionState();
 }
 
 class _TransactionHistorySectionState extends State<TransactionHistorySection> {
@@ -496,14 +536,12 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
 
   @override
   Widget build(BuildContext context) {
-    // Eğer showAll false ise sadece Bill görünsün
     final visibleTransactions =
     showAll ? widget.transactions : [widget.transactions.first];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -528,9 +566,7 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-
-        // Transactions list
+        const SizedBox(height: 16),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -558,14 +594,17 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: const Color(0xFFF5FDE8),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(children: [
-                    Icon(iconData, color: iconColor),
+                    CircleAvatar(
+                      backgroundColor: Colors.white,
+                      child: Icon(iconData, color: iconColor),
+                    ),
                     const SizedBox(width: 10),
                     Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -592,6 +631,203 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
             );
           },
         ),
+      ],
+    );
+  }
+}
+
+// Previous Usage List
+class PreviousUsageList extends StatefulWidget {
+  final List<UsageData> previousUsages;
+  const PreviousUsageList({super.key, required this.previousUsages});
+
+  @override
+  State<PreviousUsageList> createState() => _PreviousUsageListState();
+}
+
+class _PreviousUsageListState extends State<PreviousUsageList> {
+  bool show = false;
+
+  String formatPeriod(String period) {
+    try {
+      if (period.contains("M")) {
+        final year = period.split("M")[0];
+        final month = int.parse(period.split("M")[1]);
+        final monthName = [
+          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        ][month - 1];
+        return "$monthName $year";
+      } else if (period.contains("W")) {
+        final year = period.split("W")[0];
+        final week = period.split("W")[1];
+        return "Week $week, $year";
+      }
+    } catch (e) {
+      return period;
+    }
+    return period;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              "Previous Records",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Color(0xFF112250),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => setState(() => show = !show),
+              child: Text(
+                show ? "See Less" : "See All",
+                style: const TextStyle(
+                  color: Colors.blue,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Kartlar
+        if (show)
+          SizedBox(
+            height: 170,
+            child: ListView.separated(
+              physics: const BouncingScrollPhysics(),
+              scrollDirection: Axis.horizontal,
+              itemCount: widget.previousUsages.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final usage = widget.previousUsages[index];
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                    child: Container(
+                      width: 200,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.55),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.black12, width: 0.6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 6,
+                            offset: const Offset(2, 3),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Dönem
+                          Text(
+                            formatPeriod(usage.period),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Color(0xFF112250),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const Divider(
+                              height: 14, thickness: 1, color: Colors.black12),
+
+                          // Usage
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: Colors.blue.withOpacity(0.15),
+                                child: const Icon(Icons.water_drop,
+                                    size: 16, color: Colors.blueAccent),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "${usage.liters} L",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blueAccent,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+
+                          // Bill
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: Colors.green.withOpacity(0.15),
+                                child: const Icon(Icons.attach_money,
+                                    size: 16, color: Colors.green),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "₺${usage.billMonthly}",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+
+                          // Goal
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor:
+                                Colors.orange.withOpacity(0.15),
+                                child: const Icon(Icons.flag,
+                                    size: 16, color: Colors.orangeAccent),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "${usage.goal} L",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.orangeAccent,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
       ],
     );
   }

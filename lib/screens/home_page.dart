@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'dart:math';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,91 +13,55 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  bool _showAll = false;
-  String _period = "Weekly";
   DateTime _selectedDate = DateTime.now();
   final _litersCtrl = TextEditingController();
+  final _weeklyCtrl = TextEditingController();
   final _billCtrl = TextEditingController();
+  final _goalCtrl = TextEditingController();
 
+  Offset? fabPosition;
 
-  Offset fabPosition = const Offset(300, 0);
-
-
-  final List<Map<String, dynamic>> _transactions = const [
-    {
-      "title": "Bill",
-      "subtitle": "Liters consumed - last week",
-      "amount": "- \$5.99",
-      "icon": Icons.receipt_long,
-      "isExpense": true
-    },
-    {
-      "title": "Usage",
-      "subtitle": "Weekly liters consumed",
-      "amount": "- 250 L",
-      "icon": Icons.water_drop,
-      "isExpense": true
-    },
-    {
-      "title": "Usage",
-      "subtitle": "Monthly liters consumed",
-      "amount": "- 980 L",
-      "icon": Icons.water_drop,
-      "isExpense": true
-    },
-    {
-      "title": "Goal",
-      "subtitle": "Your saving target",
-      "amount": "+ 1000 L",
-      "icon": Icons.emoji_events,
-      "isExpense": false
-    },
-    {
-      "title": "Extra",
-      "subtitle": "Old usage record",
-      "amount": "- 150 L",
-      "icon": Icons.water_drop,
-      "isExpense": true
-    },
-  ];
-
-  String getWeekNumber(DateTime date) {
-    int dayOfYear = int.parse(DateFormat("D").format(date));
-    return ((dayOfYear - date.weekday + 10) / 7)
-        .floor()
-        .toString()
-        .padLeft(2, '0');
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (fabPosition == null) {
+      final screen = MediaQuery.of(context).size;
+      const fabW = 110.0;
+      const fabH = 40.0;
+      fabPosition = Offset(
+          screen.width - fabW - 16,
+          16,
+      );
+    }
   }
 
   Future<void> _saveUsage() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User not logged in")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("User not logged in")));
       return;
     }
 
-    final liters = double.tryParse(_litersCtrl.text) ?? 0;
+    final monthlyLiters = double.tryParse(_litersCtrl.text) ?? 0;
+    final weeklyLiters = double.tryParse(_weeklyCtrl.text) ?? 0;
     final bill = double.tryParse(_billCtrl.text) ?? 0;
-    String docId;
-    Map<String, dynamic> data = {
+    final goal = double.tryParse(_goalCtrl.text) ?? 0;
+
+    final month = _selectedDate.month.toString().padLeft(2, '0');
+    final docId = "${user.uid}_${DateTime.now().millisecondsSinceEpoch}";
+
+    final data = {
       "userId": user.uid,
       "date": Timestamp.fromDate(_selectedDate),
-      "type": _period.toLowerCase(),
-      "liters": liters,
+      "monthlyLiters": monthlyLiters,
+      "weeklyLiters": weeklyLiters,
+      "billMonthly": bill,
+      "goal": goal,
+      "period": "${_selectedDate.year}M$month",
+      "type": "monthly",
     };
-
-    if (_period == "Weekly") {
-      final week = getWeekNumber(_selectedDate);
-      docId = "${user.uid}_2025W$week";
-      data["period"] = "2025W$week";
-    } else {
-      final month = _selectedDate.month.toString().padLeft(2, '0');
-      docId = "${user.uid}_${_selectedDate.year}M$month";
-      data["period"] = "${_selectedDate.year}M$month";
-      data["billMonthly"] = bill;
-    }
 
     await FirebaseFirestore.instance
         .collection("usages")
@@ -104,9 +69,15 @@ class _HomePageState extends State<HomePage> {
         .set(data, SetOptions(merge: true));
 
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Usage saved successfully!")),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Usage saved successfully!")));
+
+    // formu temizle
+    _litersCtrl.clear();
+    _weeklyCtrl.clear();
+    _billCtrl.clear();
+    _goalCtrl.clear();
   }
 
   void _openUsageSheet() {
@@ -120,302 +91,378 @@ class _HomePageState extends State<HomePage> {
       builder: (ctx) {
         final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
 
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(bottom: bottomInset),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 5,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF5FDE8),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      const Text(
-                        "Please enter the amount shown on your water meter.",
-                        style: TextStyle(color: Color(0xFFF5FDE8), fontSize: 16),
-                      ),
-                      const SizedBox(height: 16),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ChoiceChip(
-                            label: const Text("Weekly"),
-                            selected: _period == "Weekly",
-                            onSelected: (_) =>
-                                setModalState(() => _period = "Weekly"),
-                            selectedColor: const Color(0xFFEDC58F),
-                          ),
-                          const SizedBox(width: 12),
-                          ChoiceChip(
-                            label: const Text("Monthly"),
-                            selected: _period == "Monthly",
-                            onSelected: (_) =>
-                                setModalState(() => _period = "Monthly"),
-                            selectedColor: const Color(0xFFEDC58F),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // --- Date Picker ---
-                      InkWell(
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: ctx,
-                            initialDate: _selectedDate,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2035),
-                          );
-                          if (picked != null) {
-                            setModalState(() => _selectedDate = picked);
-                          }
-                        },
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: "Date",
-                            labelStyle: const TextStyle(color: Colors.white70),
-                            filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide:
-                              const BorderSide(color: Colors.white30),
-                            ),
-                          ),
-                          child: Text(
-                            "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}",
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      TextField(
-                        controller: _litersCtrl,
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(color: Color(0xFFF5FDE8)),
-                        decoration: InputDecoration(
-                          labelText: "Consumption (liters)",
-                          labelStyle: const TextStyle(color: Colors.white70),
-                          filled: true,
-                          fillColor: Colors.white10,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide:
-                            const BorderSide(color: Colors.white30),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      if (_period == "Monthly")
-                        TextField(
-                          controller: _billCtrl,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Color(0xFFF5FDE8)),
-                          decoration: InputDecoration(
-                            labelText: "Bill (₺)",
-                            labelStyle: const TextStyle(color: Colors.white70),
-                            filled: true,
-                            fillColor: Colors.white10,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide:
-                              const BorderSide(color: Colors.white30),
-                            ),
-                          ),
-                        ),
-
-                      const SizedBox(height: 18),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFEDC58F),
-                            foregroundColor: const Color(0xFFD8CBC2),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: _saveUsage,
-                          child: const Text("SUBMIT"),
-                        ),
-                      ),
-                    ],
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5FDE8),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                ),
+                  const Text(
+                    "Please enter your usage",
+                    style: TextStyle(color: Color(0xFFF5FDE8), fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Monthly Consumption
+                  TextField(
+                    controller: _litersCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Color(0xFFF5FDE8)),
+                    decoration: _input("Monthly Consumption (liters)"),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Weekly Consumption
+                  TextField(
+                    controller: _weeklyCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Color(0xFFF5FDE8)),
+                    decoration: _input("Weekly Consumption (liters)"),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Bill
+                  TextField(
+                    controller: _billCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Color(0xFFF5FDE8)),
+                    decoration: _input("Bill (₺)"),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Goal
+                  TextField(
+                    controller: _goalCtrl,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Color(0xFFF5FDE8)),
+                    decoration: _input("Goal (liters)"),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Submit button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEDC58F),
+                        foregroundColor: const Color(0xFFD8CBC2),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _saveUsage,
+                      child: const Text("SUBMIT"),
+                    ),
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         );
       },
+    );
+  }
+
+  InputDecoration _input(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white70),
+      filled: true,
+      fillColor: Colors.white10,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.white30),
+      ),
     );
   }
 
   @override
   void dispose() {
     _litersCtrl.dispose();
+    _weeklyCtrl.dispose();
     _billCtrl.dispose();
+    _goalCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final visible = _showAll ? _transactions : _transactions.take(4).toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFD8C8C2),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFD8C8C2),
-        elevation: 0,
-        title: Row(
+      body: SafeArea(
+        child: Column(
           children: [
-            Image.asset("assets/images/logo.png", width: 50, height: 50),
-            const SizedBox(width: 8),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Welcome back,",
-                    style: TextStyle(color: Colors.black54, fontSize: 14)),
-                Text("Ankara, Bahçelievler",
-                    style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600)),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Image.asset("assets/images/logo.png", width: 70, height: 70),
+                  const SizedBox(width: 8),
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection("users")
+                        .doc(FirebaseAuth.instance.currentUser?.uid)
+                        .snapshots(),
+                    builder: (context, snap) {
+                      if (!snap.hasData) {
+                        return const Text(
+                          "Loading...",
+                          style: TextStyle(color: Colors.black54, fontSize: 14),
+                        );
+                      }
+                      if (!snap.data!.exists) {
+                        return const Text(
+                          "No profile",
+                          style: TextStyle(color: Colors.black54, fontSize: 14),
+                        );
+                      }
+                      final data = snap.data!.data() as Map<String, dynamic>;
+                      final city =
+                          toBeginningOfSentenceCase(
+                            (data["city"] ?? "-").toString(),
+                            'tr_TR',
+                          ) ??
+                          '-';
+                      final district =
+                          toBeginningOfSentenceCase(
+                            (data["district"] ?? "-").toString(),
+                            'tr_TR',
+                          ) ??
+                          '-';
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Welcome back,",
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            "$city, $district",
+                            style: const TextStyle(
+                              color: Color(0xFF112250),
+                              fontSize: 24,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: Stack(
+                children: [
+                  ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      ReservoirPieChart(city: "Ankara"),
+                      const SizedBox(height: 20),
+
+                      // Goal Progress
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection("usages")
+                            .where(
+                              "userId",
+                              isEqualTo: FirebaseAuth.instance.currentUser?.uid,
+                            )
+                            .orderBy("date", descending: true)
+                            .limit(1)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            );
+                          }
+                          if (snapshot.data!.docs.isEmpty) {
+                            return const Text("No usage data found");
+                          }
+                          final doc =
+                              snapshot.data!.docs.first.data()
+                                  as Map<String, dynamic>;
+                          final liters = (doc["monthlyLiters"] ?? 0).toDouble();
+                          final goal = (doc["goal"] ?? 0).toDouble();
+                          return GoalProgressCard(liters: liters, goal: goal);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Comparison
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection("usages")
+                            .where(
+                              "userId",
+                              isEqualTo: FirebaseAuth.instance.currentUser?.uid,
+                            )
+                            .orderBy("date", descending: true)
+                            .limit(2)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            );
+                          }
+                          if (snapshot.data!.docs.length < 2) {
+                            return const Text("Not enough data for comparison");
+                          }
+                          final docs = snapshot.data!.docs;
+                          final current =
+                              docs[0].data() as Map<String, dynamic>;
+                          final previous =
+                              docs[1].data() as Map<String, dynamic>;
+
+                          final cur = (current["monthlyLiters"] ?? 0)
+                              .toDouble();
+                          final prev = (previous["monthlyLiters"] ?? 0)
+                              .toDouble();
+
+                          final diff = cur - prev;
+                          final percent = prev > 0 ? (diff / prev * 100) : 0.0;
+
+                          return ComparisonCard(
+                            current: cur,
+                            previous: prev,
+                            percentChange: percent.toStringAsFixed(1),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      const DailyTipCard(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+
+                  // FAB (taşınabilir)
+                  if (fabPosition != null)
+                  Positioned(
+                    left: fabPosition!.dx,
+                    top: fabPosition!.dy,
+                    child: GestureDetector(
+                      onPanUpdate: (details) {
+                        setState(() {
+                          final screen = MediaQuery.of(context).size;
+                          const fabW = 110.0;
+                          const fabH = 40.0;
+                          double newX = fabPosition!.dx + details.delta.dx;
+                          double newY = fabPosition!.dy + details.delta.dy;
+                          if (newX < 0) newX = 0;
+                          if (newY < 0) newY = 0;
+                          if (newX > screen.width - fabW)
+                            newX = screen.width - fabW;
+                          if (newY > screen.height - fabH - 100) {
+                            newY = screen.height - fabH - 100;
+                          }
+                          fabPosition = Offset(newX, newY);
+                        });
+                      },
+                      child: FloatingActionButton.extended(
+                        backgroundColor: const Color(0xFFC30B0E),
+                        foregroundColor: const Color(0xFFD8CBC2),
+                        onPressed: _openUsageSheet,
+                        icon: const Icon(Icons.add),
+                        label: const Text(
+                          "Usage",
+                          style: TextStyle(
+                            color: Color(0xFFD8CBC2),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
-      body: Stack(
+    );
+  }
+}
+
+// Comparison Card
+class ComparisonCard extends StatelessWidget {
+  final double current;
+  final double previous;
+  final String percentChange;
+
+  const ComparisonCard({
+    super.key,
+    required this.current,
+    required this.previous,
+    required this.percentChange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final changeValue = double.tryParse(percentChange) ?? 0.0;
+    final isDecrease = changeValue < 0;
+    final ratio = previous > 0 ? (current / previous).clamp(0.0, 2.0) : 1.0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5FDE8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ListView(
-            padding: const EdgeInsets.all(16),
+          Row(
             children: [
-              ReservoirPieChart(city: "Ankara"),
-              const SizedBox(height: 20),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("Transaction History",
-                      style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  if (_transactions.length > 4)
-                    GestureDetector(
-                      onTap: () => setState(() => _showAll = !_showAll),
-                      child: Text(
-                        _showAll ? "See Less" : "See All",
-                        style: const TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.w500,
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-                    ),
-                ],
+              Icon(
+                isDecrease ? Icons.arrow_downward : Icons.arrow_upward,
+                color: isDecrease ? Colors.green : Colors.red,
               ),
-              const SizedBox(height: 8),
-
-              ...visible.map((tx) {
-                final isExpense = tx["isExpense"] as bool;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5FDE8),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(children: [
-                        CircleAvatar(
-                          backgroundColor: Colors.white,
-                          child: Icon(tx["icon"] as IconData,
-                              color: Colors.black54),
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(tx["title"] as String,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF112250),
-                                )),
-                            Text(tx["subtitle"] as String,
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.black38)),
-                          ],
-                        ),
-                      ]),
-                      Text(
-                        tx["amount"] as String,
-                        style: TextStyle(
-                          color: isExpense ? Colors.red : Colors.green,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
-          ),
-          Positioned(
-            left: fabPosition.dx,
-            top: fabPosition.dy,
-            child: GestureDetector(
-              onPanUpdate: (details) {
-                setState(() {
-                  final screenSize = MediaQuery.of(context).size;
-                  const fabWidth = 110.0;
-                  const fabHeight = 40.0;
-
-                  double newX = fabPosition.dx + details.delta.dx;
-                  double newY = fabPosition.dy + details.delta.dy;
-
-                  if (newX < 0) newX = 0;
-                  if (newY < 0) newY = 0;
-                  if (newX > screenSize.width - fabWidth) {
-                    newX = screenSize.width - fabWidth;
-                  }
-                  if (newY > screenSize.height - fabHeight - 100) {
-                    newY = screenSize.height - fabHeight - 100;
-                  }
-
-                  fabPosition = Offset(newX, newY);
-                });
-              },
-              child: FloatingActionButton.extended(
-                backgroundColor: const Color(0xFFC30B0E),
-                foregroundColor: const Color(0xFFD8CBC2),
-                onPressed: _openUsageSheet,
-                icon: const Icon(Icons.add),
-                label: const Text(
-                  "Usage",
-                  style: TextStyle(
-                    color: Color(0xFFD8CBC2),
-                    fontWeight: FontWeight.bold,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  isDecrease
+                      ? "Great! You used ${percentChange.replaceAll('-', '')}% less water than last time."
+                      : "Oops! You used $percentChange% more water than last time.",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF112250),
                   ),
                 ),
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: ratio > 1 ? 1 : ratio,
+            backgroundColor: Colors.grey[300],
+            color: isDecrease ? Colors.green : Colors.red,
+            minHeight: 10,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Current: ${current.toStringAsFixed(0)} L | Previous: ${previous.toStringAsFixed(0)} L",
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
           ),
         ],
       ),
@@ -423,32 +470,137 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class ReservoirPieChart extends StatefulWidget {
-  final String city;
-  const ReservoirPieChart({super.key, required this.city});
+// Goal Progress Card
+class GoalProgressCard extends StatelessWidget {
+  final double liters;
+  final double goal;
+
+  const GoalProgressCard({super.key, required this.liters, required this.goal});
 
   @override
-  State<ReservoirPieChart> createState() => _ReservoirPieChartState();
+  Widget build(BuildContext context) {
+    final progress = goal > 0 ? (liters / goal).clamp(0.0, 1.0) : 0.0;
+    final remaining = goal - liters;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5FDE8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Goal Progress",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF112250),
+            ),
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.grey[300],
+            color: const Color(0xFF04bfda),
+            minHeight: 12,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            remaining > 0
+                ? "You need ${remaining.toStringAsFixed(0)} L more to reach your goal."
+                : "🎉 Goal reached! Great job!",
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _ReservoirPieChartState extends State<ReservoirPieChart> {
-  int touchedIndex = -1;
+// Daily Tip Card
+class DailyTipCard extends StatefulWidget {
+  const DailyTipCard({super.key});
+
+  @override
+  State<DailyTipCard> createState() => _DailyTipCardState();
+}
+
+class _DailyTipCardState extends State<DailyTipCard> {
+  late String selectedTip;
+
+  final List<String> tips = const [
+    "💧 Turn off the tap while brushing your teeth to save 20 L a day.",
+    "🚿 Take a 5-minute shower instead of 10 — save up to 50 L.",
+    "🪣 Use a bucket instead of a hose when washing your car.",
+    "🌱 Water plants in the early morning to reduce evaporation.",
+    "🛠️ Fix leaking taps — one drip per second wastes 11,000 L per year.",
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _pickRandomTip();
+  }
+
+  void _pickRandomTip() {
+    final random = Random();
+    setState(() {
+      selectedTip = tips[random.nextInt(tips.length)];
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5FDE8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.lightbulb, color: Colors.orange),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              selectedTip,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF112250)),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.blueGrey),
+            tooltip: "Get another tip",
+            onPressed: _pickRandomTip,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Reservoir Pie Chart
+class ReservoirPieChart extends StatelessWidget {
+  final String city;
+  const ReservoirPieChart({super.key, required this.city});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection("reservoirs")
-          .where("city", isEqualTo: widget.city)
+          .where("city", isEqualTo: city)
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return _buildCard(const Center(child: CircularProgressIndicator()));
+          return const Center(child: CircularProgressIndicator());
         }
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
-          return _buildCard(
-              const Center(child: Text("No reservoir data found")));
+          return const Text("No reservoir data found");
         }
 
         final colors = [
@@ -460,46 +612,34 @@ class _ReservoirPieChartState extends State<ReservoirPieChart> {
           Colors.teal,
         ];
 
-        return _buildCard(
-          Column(
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5FDE8),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
             children: [
               SizedBox(
                 height: 200,
                 child: PieChart(
                   PieChartData(
-                    pieTouchData: PieTouchData(
-                      touchCallback: (event, pieTouchResponse) {
-                        setState(() {
-                          if (!event.isInterestedForInteractions ||
-                              pieTouchResponse == null ||
-                              pieTouchResponse.touchedSection == null) {
-                            touchedIndex = -1;
-                            return;
-                          }
-                          touchedIndex = pieTouchResponse
-                              .touchedSection!.touchedSectionIndex;
-                        });
-                      },
-                    ),
                     borderData: FlBorderData(show: false),
                     sectionsSpace: 2,
                     centerSpaceRadius: 40,
                     sections: List.generate(docs.length, (i) {
                       final data = docs[i].data() as Map<String, dynamic>;
                       final percent = (data["capacityPercent"] ?? 0).toDouble();
-                      final isTouched = i == touchedIndex;
-                      final radius = isTouched ? 65.0 : 55.0;
-                      final fontSize = isTouched ? 22.0 : 14.0;
 
                       return PieChartSectionData(
                         color: colors[i % colors.length],
                         value: percent,
                         title: "${percent.toInt()}%",
-                        radius: radius,
-                        titleStyle: TextStyle(
-                          fontSize: fontSize,
+                        radius: 55,
+                        titleStyle: const TextStyle(
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFFF5FDE8),
+                          color: Color(0xFFF5FDE8),
                         ),
                       );
                     }),
@@ -535,17 +675,6 @@ class _ReservoirPieChartState extends State<ReservoirPieChart> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildCard(Widget child) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5FDE8),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: child,
     );
   }
 }

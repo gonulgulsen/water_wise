@@ -1,22 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // ✅ tarih-saat formatı için
+import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TaskPage extends StatefulWidget {
   const TaskPage({super.key});
+
   @override
   State<TaskPage> createState() => _TaskPageState();
 }
 
 class _TaskPageState extends State<TaskPage> {
-  // UI sabitleri
   static const double _iconTileWidth = 80;
   static const double _iconTileHeight = 130;
   static const double _imageSize = 56;
 
   String selectedCategory = "Indoor";
   String selectedTab = "today";
-  int _hoveredIndex = -1;
+  int _hoveredCompleteIndex = -1;
+  int _hoveredDeleteIndex = -1;
+  int _pressedCompleteIndex = -1;
+  int _pressedDeleteIndex = -1;
+
+  String? fullName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+    if (doc.exists) {
+      final data = doc.data()!;
+      final firstName = data["name"] ?? "";
+      final lastName = data["surname"] ?? "";
+      setState(() {
+        fullName = "$firstName $lastName".trim();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final double myTasksHeight = MediaQuery.of(context).size.height * 0.45;
@@ -29,14 +61,17 @@ class _TaskPageState extends State<TaskPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           "Welcome back,",
                           style: TextStyle(
                             fontSize: 16,
@@ -44,10 +79,10 @@ class _TaskPageState extends State<TaskPage> {
                             color: Colors.black26,
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
-                          "Tanya Myroniuk",
-                          style: TextStyle(
+                          fullName ?? "Loading...",
+                          style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF112250),
@@ -102,7 +137,8 @@ class _TaskPageState extends State<TaskPage> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => setState(() => selectedCategory = "Indoor"),
+                              onTap: () =>
+                                  setState(() => selectedCategory = "Indoor"),
                               child: Center(
                                 child: Text(
                                   "Indoor",
@@ -118,7 +154,8 @@ class _TaskPageState extends State<TaskPage> {
                           ),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => setState(() => selectedCategory = "Outdoor"),
+                              onTap: () =>
+                                  setState(() => selectedCategory = "Outdoor"),
                               child: Center(
                                 child: Text(
                                   "Outdoor",
@@ -148,17 +185,41 @@ class _TaskPageState extends State<TaskPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: selectedCategory == "Indoor"
                       ? [
-                    _buildTaskIcon("assets/images/dishwasher-icon.png", "Full Dishwasher"),
-                    _buildTaskIcon("assets/images/shower-icon.png", "Short Shower"),
-                    _buildTaskIcon("assets/images/laundry2-icon.png", "Full Laundry"),
-                    _buildTaskIcon("assets/images/reuse-icon.png", "Reuse Water"),
-                  ]
+                          _buildTaskIcon(
+                            "assets/images/dishwasher-icon.png",
+                            "Full Dishwasher",
+                          ),
+                          _buildTaskIcon(
+                            "assets/images/shower-icon.png",
+                            "Short Shower",
+                          ),
+                          _buildTaskIcon(
+                            "assets/images/laundry2-icon.png",
+                            "Full Laundry",
+                          ),
+                          _buildTaskIcon(
+                            "assets/images/reuse-icon.png",
+                            "Reuse Water",
+                          ),
+                        ]
                       : [
-                    _buildTaskIcon("assets/images/cloud-icon.png", "Rain Harvest"),
-                    _buildTaskIcon("assets/images/garden-watering-icon.png", "Night Watering"),
-                    _buildTaskIcon("assets/images/drop-icon.png", "Drip Irrigation"),
-                    _buildTaskIcon("assets/images/plants-icon.png", "Drought Plants"),
-                  ],
+                          _buildTaskIcon(
+                            "assets/images/cloud-icon.png",
+                            "Rain Harvest",
+                          ),
+                          _buildTaskIcon(
+                            "assets/images/garden-watering-icon.png",
+                            "Night Watering",
+                          ),
+                          _buildTaskIcon(
+                            "assets/images/drop-icon.png",
+                            "Drip Irrigation",
+                          ),
+                          _buildTaskIcon(
+                            "assets/images/plants-icon.png",
+                            "Drought Plants",
+                          ),
+                        ],
                 ),
               ),
 
@@ -197,7 +258,10 @@ class _TaskPageState extends State<TaskPage> {
               ),
 
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     _buildTab("Today"),
@@ -212,7 +276,9 @@ class _TaskPageState extends State<TaskPage> {
               SizedBox(
                 height: myTasksHeight,
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection("tasks").snapshots(),
+                  stream: FirebaseFirestore.instance
+                      .collection("tasks")
+                      .snapshots(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
@@ -221,9 +287,7 @@ class _TaskPageState extends State<TaskPage> {
                     final docs = snapshot.data!.docs.where((doc) {
                       final data = doc.data() as Map<String, dynamic>;
                       return data["category"] == selectedCategory &&
-                          (data["status"] ?? "")
-                              .toString()
-                              .toLowerCase() ==
+                          (data["status"] ?? "").toString().toLowerCase() ==
                               selectedTab.toLowerCase();
                     }).toList();
 
@@ -263,39 +327,129 @@ class _TaskPageState extends State<TaskPage> {
                                 const SizedBox(height: 10),
 
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Row(
                                       children: [
-                                        const Icon(Icons.calendar_today,
-                                            size: 16, color: Colors.grey),
+                                        const Icon(
+                                          Icons.calendar_today,
+                                          size: 16,
+                                          color: Colors.grey,
+                                        ),
                                         const SizedBox(width: 5),
                                         Text(
                                           "${data["date"] ?? ""} ${data["time"] ?? ""}",
-                                          style: const TextStyle(color: Colors.grey),
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                          ),
                                         ),
                                       ],
                                     ),
 
-                                    MouseRegion(
-                                      cursor: SystemMouseCursors.click,
-                                      onEnter: (_) => setState(() => _hoveredIndex = index),
-                                      onExit: (_) => setState(() => _hoveredIndex = -1),
-                                      child: GestureDetector(
-                                        onTap: () async {
-                                          await FirebaseFirestore.instance
-                                              .collection("tasks")
-                                              .doc(docs[index].id)
-                                              .delete();
-                                        },
-                                        child: Icon(
-                                          Icons.delete,
-                                          size: 18,
-                                          color: _hoveredIndex == index
-                                              ? Colors.grey.shade800
-                                              : Colors.grey,
+                                    Row(
+                                      children: [
+                                        Row(
+                                          children: [
+                                            if (selectedTab != "completed")
+                                              InkWell(
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                splashColor: Colors.transparent,
+                                                highlightColor:
+                                                    Colors.transparent,
+                                                onHover: (h) => setState(
+                                                  () => _hoveredCompleteIndex =
+                                                      h ? index : -1,
+                                                ),
+                                                onTapDown: (_) => setState(
+                                                  () => _pressedCompleteIndex =
+                                                      index,
+                                                ),
+                                                onTapCancel: () => setState(
+                                                  () => _pressedCompleteIndex =
+                                                      -1,
+                                                ),
+                                                onTapUp: (_) => setState(
+                                                  () => _pressedCompleteIndex =
+                                                      -1,
+                                                ),
+                                                onTap: () async {
+                                                  await FirebaseFirestore
+                                                      .instance
+                                                      .collection("tasks")
+                                                      .doc(docs[index].id)
+                                                      .update({
+                                                        "status": "completed",
+                                                      });
+                                                },
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(
+                                                    4,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.check_circle,
+                                                    size: 22,
+                                                    color:
+                                                        (_hoveredCompleteIndex ==
+                                                                index ||
+                                                            _pressedCompleteIndex ==
+                                                                index)
+                                                        ? Colors.green
+                                                        : Colors.grey,
+                                                  ),
+                                                ),
+                                              ),
+
+                                            const SizedBox(width: 12),
+
+                                            InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              splashColor: Colors.transparent,
+                                              highlightColor:
+                                                  Colors.transparent,
+                                              onHover: (h) => setState(
+                                                () => _hoveredDeleteIndex = h
+                                                    ? index
+                                                    : -1,
+                                              ),
+                                              onTapDown: (_) => setState(
+                                                () =>
+                                                    _pressedDeleteIndex = index,
+                                              ),
+                                              onTapCancel: () => setState(
+                                                () => _pressedDeleteIndex = -1,
+                                              ),
+                                              onTapUp: (_) => setState(
+                                                () => _pressedDeleteIndex = -1,
+                                              ),
+                                              onTap: () async {
+                                                await FirebaseFirestore.instance
+                                                    .collection("tasks")
+                                                    .doc(docs[index].id)
+                                                    .delete();
+                                              },
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(
+                                                  4,
+                                                ),
+                                                child: Icon(
+                                                  Icons.delete,
+                                                  size: 20,
+                                                  color:
+                                                      (_hoveredDeleteIndex ==
+                                                              index ||
+                                                          _pressedDeleteIndex ==
+                                                              index)
+                                                      ? Colors.red
+                                                      : Colors.grey,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -303,8 +457,6 @@ class _TaskPageState extends State<TaskPage> {
                             ),
                           ),
                         );
-
-
                       },
                     );
                   },
@@ -404,10 +556,14 @@ class _TaskPageState extends State<TaskPage> {
               const SizedBox(height: 12),
               Expanded(
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   itemCount: items.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (_, i) => _sheetCard(context, items[i]), // parent context
+                  itemBuilder: (_, i) =>
+                      _sheetCard(context, items[i]), // parent context
                 ),
               ),
             ],
@@ -435,9 +591,11 @@ class _TaskPageState extends State<TaskPage> {
             Row(
               children: [
                 Container(
-                  width: 48, height: 48,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.white, borderRadius: BorderRadius.circular(12),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(8),
@@ -458,14 +616,14 @@ class _TaskPageState extends State<TaskPage> {
               ],
             ),
             const SizedBox(height: 8),
-            Container(height: 1, color: const Color(0xFF112250).withOpacity(0.25)),
+            Container(
+              height: 1,
+              color: const Color(0xFF112250).withOpacity(0.25),
+            ),
             const SizedBox(height: 8),
             Text(
               item.description,
-              style: const TextStyle(
-                color: Color(0xFF112250),
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: Color(0xFF112250), fontSize: 13),
             ),
           ],
         ),
@@ -495,12 +653,18 @@ class _TaskPageState extends State<TaskPage> {
             }
 
             Future<void> pickTime() async {
-              final t = await showTimePicker(context: ctx, initialTime: selectedTime);
+              final t = await showTimePicker(
+                context: ctx,
+                initialTime: selectedTime,
+              );
               if (t != null) setSB(() => selectedTime = t);
             }
 
             return Dialog(
-              insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 24,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: const BorderSide(color: Colors.greenAccent),
@@ -526,7 +690,10 @@ class _TaskPageState extends State<TaskPage> {
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(6),
-                                child: Image.asset(option.iconPath, fit: BoxFit.contain),
+                                child: Image.asset(
+                                  option.iconPath,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -571,12 +738,14 @@ class _TaskPageState extends State<TaskPage> {
                             ChoiceChip(
                               label: const Text('Upcoming'),
                               selected: status == 'upcoming',
-                              onSelected: (_) => setSB(() => status = 'upcoming'),
+                              onSelected: (_) =>
+                                  setSB(() => status = 'upcoming'),
                             ),
                             ChoiceChip(
                               label: const Text('Completed'),
                               selected: status == 'completed',
-                              onSelected: (_) => setSB(() => status = 'completed'),
+                              onSelected: (_) =>
+                                  setSB(() => status = 'completed'),
                             ),
                           ],
                         ),
@@ -588,7 +757,10 @@ class _TaskPageState extends State<TaskPage> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: pickDate,
-                                icon: const Icon(Icons.calendar_today, size: 18),
+                                icon: const Icon(
+                                  Icons.calendar_today,
+                                  size: 18,
+                                ),
                                 label: Text(
                                   DateFormat("yyyy-MM-dd").format(selectedDate),
                                 ),
@@ -600,7 +772,7 @@ class _TaskPageState extends State<TaskPage> {
                                 onPressed: pickTime,
                                 icon: const Icon(Icons.access_time, size: 18),
                                 label: Text(
-                                  "${selectedTime.hour.toString().padLeft(2,'0')}:${selectedTime.minute.toString().padLeft(2,'0')}",
+                                  "${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}",
                                 ),
                               ),
                             ),
@@ -623,16 +795,18 @@ class _TaskPageState extends State<TaskPage> {
                               await FirebaseFirestore.instance
                                   .collection('tasks')
                                   .add({
-                                "title": option.title,
-                                "description": option.description,
-                                "iconPath": option.iconPath,
-                                "note": noteController.text.trim(),
-                                "category": selectedCategory,
-                                "status": status,
-                                "date": DateFormat("yyyy-MM-dd").format(selectedDate),
-                                "time":
-                                "${selectedTime.hour.toString().padLeft(2,'0')}:${selectedTime.minute.toString().padLeft(2,'0')}",
-                              });
+                                    "title": option.title,
+                                    "description": option.description,
+                                    "iconPath": option.iconPath,
+                                    "note": noteController.text.trim(),
+                                    "category": selectedCategory,
+                                    "status": status,
+                                    "date": DateFormat(
+                                      "yyyy-MM-dd",
+                                    ).format(selectedDate),
+                                    "time":
+                                        "${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}",
+                                  });
 
                               if (context.mounted) Navigator.pop(ctx);
                             },
@@ -685,7 +859,8 @@ class _TaskPageState extends State<TaskPage> {
         _TaskOption(
           iconPath: "assets/images/garden-watering-icon.png",
           title: "Night Watering",
-          description: "Night watering helps save water during hot summer months.",
+          description:
+              "Night watering helps save water during hot summer months.",
         ),
         _TaskOption(
           iconPath: "assets/images/drop-icon.png",
@@ -701,7 +876,11 @@ class _TaskPageState extends State<TaskPage> {
     }
   }
 
-  _TaskOption _optionForTitle(String title, String fallbackIcon, String category) {
+  _TaskOption _optionForTitle(
+    String title,
+    String fallbackIcon,
+    String category,
+  ) {
     final list = _taskOptions(category);
     final i = list.indexWhere((e) => e.title == title);
     if (i == -1) {
@@ -715,6 +894,7 @@ class _TaskOption {
   final String iconPath;
   final String title;
   final String description;
+
   _TaskOption({
     required this.iconPath,
     required this.title,

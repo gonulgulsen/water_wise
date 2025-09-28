@@ -41,16 +41,14 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     try {
-      // 1. Firebase Authentication
       UserCredential cred = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
 
       final uid = cred.user!.uid;
 
-      // 2. Users koleksiyonuna profil bilgilerini kaydet
       await FirebaseFirestore.instance.collection("users").doc(uid).set({
         "name": _nameController.text.trim(),
         "surname": _surnameController.text.trim(),
@@ -62,7 +60,6 @@ class _RegisterPageState extends State<RegisterPage> {
         "createdAt": FieldValue.serverTimestamp(),
       });
 
-      // 3. Usages koleksiyonuna ilk veriyi aç
       await FirebaseFirestore.instance.collection("usages").add({
         "userId": uid,
         "goal": 1600,
@@ -72,7 +69,6 @@ class _RegisterPageState extends State<RegisterPage> {
         "week": "2025-W01",
       });
 
-      // Başarılı → yönlendir
       showSuccessDialog(
         context,
         "Your account has been successfully created.",
@@ -115,7 +111,6 @@ class _RegisterPageState extends State<RegisterPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  // Name & Surname
                   Row(
                     children: [
                       Expanded(
@@ -153,7 +148,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Phone
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
@@ -174,7 +168,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // City
                   TextFormField(
                     controller: _cityController,
                     decoration: _underlineDecoration("City"),
@@ -190,7 +183,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // District
                   TextFormField(
                     controller: _districtController,
                     decoration: _underlineDecoration("District"),
@@ -206,7 +198,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Neighborhood
                   TextFormField(
                     controller: _neighborhoodController,
                     decoration: _underlineDecoration("Neighborhood"),
@@ -222,7 +213,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Email
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -231,8 +221,9 @@ class _RegisterPageState extends State<RegisterPage> {
                       if (v == null || v.trim().isEmpty) {
                         return "Email is required";
                       }
-                      if (!RegExp(r'^[\w\.\-]+@[\w\.\-]+\.\w{2,}$')
-                          .hasMatch(v.trim())) {
+                      if (!RegExp(
+                        r'^[\w\.\-]+@[\w\.\-]+\.\w{2,}$',
+                      ).hasMatch(v.trim())) {
                         return "Enter a valid email";
                       }
                       return null;
@@ -240,7 +231,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Password
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
@@ -257,7 +247,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Terms
                   Row(
                     children: [
                       Checkbox(
@@ -293,12 +282,11 @@ class _RegisterPageState extends State<RegisterPage> {
                             ],
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 30),
 
-                  // Create account button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(

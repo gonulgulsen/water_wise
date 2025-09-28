@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
 
-// Transaction modeli
 class Transaction {
   final String title;
   final String subtitle;
@@ -22,7 +21,6 @@ class Transaction {
   });
 }
 
-// UsageData Model
 class UsageData {
   final String userId;
   final String type;
@@ -30,7 +28,6 @@ class UsageData {
   final double liters;
   final double weeklyLiters;
   final double billMonthly;
-  final double goal;
 
   UsageData({
     required this.userId,
@@ -39,18 +36,16 @@ class UsageData {
     required this.liters,
     required this.weeklyLiters,
     required this.billMonthly,
-    required this.goal,
   });
 
   factory UsageData.fromMap(Map<String, dynamic> data) {
     return UsageData(
       userId: data['userId'] ?? '',
       type: data['type'] ?? '',
-      period: data['period'] ?? '',
-      liters: (data['monthlyLiters'] ?? data['liters'] ?? 0).toDouble(),
+      period: data['weekKey'] ?? data['monthKey'] ?? '',
+      liters: (data['liters'] ?? 0).toDouble(),
       weeklyLiters: (data['weeklyLiters'] ?? 0).toDouble(),
       billMonthly: (data['billMonthly'] ?? 0).toDouble(),
-      goal: (data['goal'] ?? 0).toDouble(),
     );
   }
 }
@@ -70,115 +65,186 @@ class _UsagePageState extends State<UsagePage> {
     return user?.uid ?? "";
   }
 
+  String _currentWeekKey(DateTime d) {
+    final firstDayOfYear = DateTime(d.year, 1, 1);
+    final days = d.difference(firstDayOfYear).inDays;
+    final weekNumber = (days ~/ 7) + 1;
+    return "${d.year}W${weekNumber.toString().padLeft(2, "0")}";
+  }
+
+  String _currentMonthKey(DateTime d) {
+    return "${d.year}M${d.month.toString().padLeft(2, '0')}";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFD8CBC2),
       body: SafeArea(
-        child: StreamBuilder<QuerySnapshot>(
+        child: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
-              .collection("usages")
-              .where("userId", isEqualTo: currentUserId)
-              .orderBy("date", descending: true)
-              .limit(5)
+              .collection("goal")
+              .doc("ankara")
               .snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
+          builder: (context, goalSnap) {
+            if (!goalSnap.hasData || !goalSnap.data!.exists) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (snapshot.data!.docs.isEmpty) {
-              return const Center(child: Text("No usage data found"));
-            }
 
-            final docs = snapshot.data!.docs;
-            final current = UsageData.fromMap(docs.first.data() as Map<String, dynamic>);
-            final previous = docs.skip(1).map((d) => UsageData.fromMap(d.data() as Map<String, dynamic>)).toList();
+            final goalData = goalSnap.data!.data() as Map<String, dynamic>;
+            final goalWeekly = (goalData["goalWeekly"] ?? 0).toDouble();
+            final goalMonthly = (goalData["goalMonthly"] ?? 0).toDouble();
 
-            final transactions = [
-              Transaction(
-                title: "Bill",
-                subtitle: "This month's water bill",
-                amount: current.billMonthly,
-                isExpense: true,
-                unit: "₺",
-              ),
-              Transaction(
-                title: "Usage",
-                subtitle: isWeekly ? "Weekly liters consumed" : "Monthly liters consumed",
-                amount: isWeekly ? current.weeklyLiters : current.liters,
-                isExpense: true,
-                unit: "L",
-              ),
-              Transaction(
-                title: "Goal",
-                subtitle: "Your saving target",
-                amount: current.goal,
-                isExpense: false,
-                unit: "L",
-              ),
-            ];
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection("usages")
+                  .where("userId", isEqualTo: currentUserId)
+                  .orderBy("date", descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text("No usage data found"));
+                }
 
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  UsageHeader(
-                    isWeekly: isWeekly,
-                    onToggle: (value) {
-                      setState(() {
-                        isWeekly = value;
-                      });
-                    },
-                    usageData: current,
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        SizedBox(
-                          height: 250,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: [
-                              SizedBox(
-                                width: 320,
-                                child: CustomLineChartCard(
-                                  title: "Water Usage",
-                                  data: _buildLineChartData(docs.take(3).toList(), isWeekly),
-                                  labels: _buildLabels(docs.take(3).toList()),
-                                  usageText: isWeekly
-                                      ? "You used ${current.weeklyLiters} L this week."
-                                      : "You used ${current.liters} L this month.",
-                                  goalText: "GOAL: ${current.goal} L",
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              SizedBox(
-                                width: 320,
-                                child: SpendingBarChartCard(
-                                  title: "Your spending",
-                                  data: _buildBarChartData(docs.take(3).toList()),
-                                  labels: _buildLabels(docs.take(3).toList()),
-                                  spendingText: "You spent ₺${current.billMonthly} this month.",
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
+                final docs = snapshot.data!.docs;
+                final usages = docs
+                    .map(
+                      (d) =>
+                          UsageData.fromMap(d.data() as Map<String, dynamic>),
+                    )
+                    .toList();
 
-                        // Transaction History Section
-                        TransactionHistorySection(transactions: transactions),
-                        const SizedBox(height: 5),
+                final now = DateTime.now();
+                final weekKey = _currentWeekKey(now);
+                final monthKey = _currentMonthKey(now);
 
-                        // Previous Usage Grid
-                        if (previous.isNotEmpty) PreviousUsageList(previousUsages: previous),
-                      ],
+                final weeklyLiters = usages
+                    .where((u) => u.type == "week" && u.period == weekKey)
+                    .fold(0.0, (sum, u) => sum + u.weeklyLiters);
+
+                final monthlyLiters = usages
+                    .where((u) => u.type == "week")
+                    .where((u) {
+                      final year = int.parse(u.period.substring(0, 4));
+                      final weekNum = int.parse(u.period.substring(5));
+                      final date = DateTime(
+                        year,
+                      ).add(Duration(days: (weekNum - 1) * 7));
+                      final monthKeyOfWeek =
+                          "${date.year}M${date.month.toString().padLeft(2, '0')}";
+                      return monthKeyOfWeek == monthKey;
+                    })
+                    .fold(0.0, (sum, u) => sum + u.weeklyLiters);
+
+                final currentUsage = isWeekly ? weeklyLiters : monthlyLiters;
+                final currentGoal = isWeekly ? goalWeekly : goalMonthly;
+
+                final transactions = [
+                  if (usages.any(
+                    (u) => u.type == "bill" && u.period == monthKey,
+                  ))
+                    Transaction(
+                      title: "Bill",
+                      subtitle: "This month's water bill",
+                      amount: usages
+                          .firstWhere(
+                            (u) => u.type == "bill" && u.period == monthKey,
+                          )
+                          .billMonthly,
+                      isExpense: true,
+                      unit: "₺",
                     ),
+                  Transaction(
+                    title: "Usage",
+                    subtitle: isWeekly
+                        ? "Weekly liters consumed"
+                        : "Monthly liters consumed",
+                    amount: currentUsage,
+                    isExpense: true,
+                    unit: "L",
                   ),
-                ],
-              ),
+                  Transaction(
+                    title: "Goal",
+                    subtitle: "Your saving target",
+                    amount: currentGoal,
+                    isExpense: false,
+                    unit: "L",
+                  ),
+                ];
+
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      UsageHeader(
+                        isWeekly: isWeekly,
+                        onToggle: (value) => setState(() => isWeekly = value),
+                        usageValue: currentUsage,
+                        goalValue: currentGoal,
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: ListView(
+                          children: [
+                            SizedBox(
+                              height: 250,
+                              child: ListView(
+                                scrollDirection: Axis.horizontal,
+                                children: [
+                                  SizedBox(
+                                    width: 320,
+                                    child: CustomLineChartCard(
+                                      title: "Water Usage",
+                                      data: _buildLineChartData(
+                                        usages,
+                                        isWeekly,
+                                      ),
+                                      labels: _buildLabels(usages),
+                                      usageText: isWeekly
+                                          ? "You used $weeklyLiters L this week."
+                                          : "You used $monthlyLiters L this month.",
+                                      goalText: "GOAL: $currentGoal L",
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  SizedBox(
+                                    width: 320,
+                                    child: SpendingBarChartCard(
+                                      title: "Your spending",
+                                      data: _buildBarChartData(usages),
+                                      labels: _buildLabels(usages),
+                                      spendingText:
+                                          usages.any(
+                                            (u) =>
+                                                u.type == "bill" &&
+                                                u.period == monthKey,
+                                          )
+                                          ? "You spent ₺${usages.firstWhere((u) => u.type == "bill" && u.period == monthKey).billMonthly}"
+                                          : "No bill yet",
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            TransactionHistorySection(
+                              transactions: transactions,
+                            ),
+                            const SizedBox(height: 5),
+
+                            PreviousUsageList(previousUsages: usages),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             );
           },
         ),
@@ -186,19 +252,36 @@ class _UsagePageState extends State<UsagePage> {
     );
   }
 
-  // Helpers
-  List<FlSpot> _buildLineChartData(List<QueryDocumentSnapshot> docs, bool weekly) {
-    final reversed = docs.reversed.toList();
-    return List.generate(reversed.length, (i) {
-      final data = UsageData.fromMap(reversed[i].data() as Map<String, dynamic>);
-      return FlSpot(i.toDouble(), weekly ? data.weeklyLiters : data.liters);
-    });
+  List<FlSpot> _buildLineChartData(List<UsageData> usages, bool weekly) {
+    if (weekly) {
+      final weeklyUsages = usages.where((u) => u.type == "week").toList();
+      return List.generate(weeklyUsages.length, (i) {
+        final data = weeklyUsages[i];
+        return FlSpot(i.toDouble(), data.weeklyLiters);
+      });
+    } else {
+      final Map<String, double> monthlyTotals = {};
+      for (var u in usages.where((u) => u.type == "week")) {
+        final year = int.parse(u.period.substring(0, 4));
+        final weekNum = int.parse(u.period.substring(5));
+        final date = DateTime(year).add(Duration(days: (weekNum - 1) * 7));
+        final monthKey =
+            "${date.year}M${date.month.toString().padLeft(2, '0')}";
+        monthlyTotals[monthKey] =
+            (monthlyTotals[monthKey] ?? 0) + u.weeklyLiters;
+      }
+
+      final entries = monthlyTotals.entries.toList();
+      return List.generate(entries.length, (i) {
+        return FlSpot(i.toDouble(), entries[i].value);
+      });
+    }
   }
 
-  List<BarChartGroupData> _buildBarChartData(List<QueryDocumentSnapshot> docs) {
-    final reversed = docs.reversed.toList();
+  List<BarChartGroupData> _buildBarChartData(List<UsageData> usages) {
+    final reversed = usages.reversed.toList();
     return List.generate(reversed.length, (i) {
-      final data = UsageData.fromMap(reversed[i].data() as Map<String, dynamic>);
+      final data = reversed[i];
       return BarChartGroupData(
         x: i,
         barRods: [
@@ -208,26 +291,24 @@ class _UsagePageState extends State<UsagePage> {
     });
   }
 
-  List<String> _buildLabels(List<QueryDocumentSnapshot> docs) {
-    final reversed = docs.reversed.toList();
-    return List.generate(reversed.length, (i) {
-      final data = UsageData.fromMap(reversed[i].data() as Map<String, dynamic>);
-      return data.period;
-    });
+  List<String> _buildLabels(List<UsageData> usages) {
+    final reversed = usages.reversed.toList();
+    return reversed.map((u) => u.period).toList();
   }
 }
 
-// Header
 class UsageHeader extends StatelessWidget {
   final bool isWeekly;
   final ValueChanged<bool> onToggle;
-  final UsageData usageData;
+  final double usageValue;
+  final double goalValue;
 
   const UsageHeader({
     super.key,
     required this.isWeekly,
     required this.onToggle,
-    required this.usageData,
+    required this.usageValue,
+    required this.goalValue,
   });
 
   @override
@@ -251,51 +332,71 @@ class UsageHeader extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Container(
+          height: 44,
           decoration: BoxDecoration(
             color: const Color(0xFF2A3D5F),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(22),
           ),
-          child: Row(
+          child: Stack(
             children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => onToggle(true),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isWeekly ? const Color(0xFF04bfda) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      "Weekly",
-                      style: TextStyle(
-                        color: isWeekly ? const Color(0xFF112250) : const Color(0xFF04bfda),
-                        fontWeight: FontWeight.w600,
-                      ),
+              AnimatedAlign(
+                alignment: isWeekly
+                    ? Alignment.centerLeft
+                    : Alignment.centerRight,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: Container(
+                  width: MediaQuery.of(context).size.width / 2 - 32,
+                  margin: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF04BFDA),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    isWeekly ? "Weekly" : "Monthly",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF112250),
                     ),
                   ),
                 ),
               ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => onToggle(false),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: !isWeekly ? const Color(0xFF04bfda) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      "Monthly",
-                      style: TextStyle(
-                        color: !isWeekly ? const Color(0xFF112250) : const Color(0xFF04bfda),
-                        fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onToggle(true),
+                      child: Center(
+                        child: Text(
+                          "Weekly",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isWeekly
+                                ? Colors.transparent
+                                : const Color(0xFF04BFDA),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onToggle(false),
+                      child: Center(
+                        child: Text(
+                          "Monthly",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: !isWeekly
+                                ? Colors.transparent
+                                : const Color(0xFF04BFDA),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -303,8 +404,8 @@ class UsageHeader extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           isWeekly
-              ? "You used ${usageData.weeklyLiters} L this week."
-              : "You used ${usageData.liters} L this month.",
+              ? "You used $usageValue L this week."
+              : "You used $usageValue L this month.",
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
@@ -313,7 +414,7 @@ class UsageHeader extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          "GOAL : ${usageData.goal} L",
+          "GOAL : $goalValue L",
           style: const TextStyle(color: Colors.black54, fontSize: 14),
         ),
       ],
@@ -321,7 +422,6 @@ class UsageHeader extends StatelessWidget {
   }
 }
 
-// Line Chart Card
 class CustomLineChartCard extends StatelessWidget {
   final String title;
   final List<FlSpot> data;
@@ -340,11 +440,11 @@ class CustomLineChartCard extends StatelessWidget {
 
   String _formatPeriod(String period) {
     if (period.contains("W")) {
-      final week = int.tryParse(period.substring(5)) ?? 0;
+      final week = int.tryParse(period.split("W")[1]) ?? 0;
       return "W$week";
     } else if (period.contains("M")) {
-      final year = int.tryParse(period.substring(0, 4)) ?? DateTime.now().year;
-      final month = int.tryParse(period.substring(5)) ?? 1;
+      final year = int.tryParse(period.split("M")[0]) ?? DateTime.now().year;
+      final month = int.tryParse(period.split("M")[1]) ?? 1;
       return DateFormat.MMM().format(DateTime(year, month));
     }
     return period;
@@ -361,21 +461,34 @@ class CustomLineChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF3c5070))),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF3c5070),
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
               const Icon(Icons.water_drop, color: Color(0xFF04bfda), size: 20),
               const SizedBox(width: 6),
-              Text(usageText,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0D1B4C))),
+              Text(
+                usageText,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Color(0xFF0D1B4C),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
-          Text(goalText, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+          Text(
+            goalText,
+            style: const TextStyle(color: Colors.black54, fontSize: 12),
+          ),
           const SizedBox(height: 1),
           Expanded(
             child: LineChart(
@@ -393,7 +506,9 @@ class CustomLineChartCard extends StatelessWidget {
                             child: Text(
                               _formatPeriod(raw),
                               style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.w500),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           );
                         }
@@ -421,7 +536,6 @@ class CustomLineChartCard extends StatelessWidget {
   }
 }
 
-// Bar Chart Card
 class SpendingBarChartCard extends StatelessWidget {
   final String title;
   final List<BarChartGroupData> data;
@@ -438,11 +552,11 @@ class SpendingBarChartCard extends StatelessWidget {
 
   String formatPeriod(String period) {
     if (period.contains("W")) {
-      final week = int.tryParse(period.substring(5)) ?? 0;
+      final week = int.tryParse(period.split("W")[1]) ?? 0;
       return "W$week";
     } else if (period.contains("M")) {
-      final year = int.tryParse(period.substring(0, 4)) ?? DateTime.now().year;
-      final month = int.tryParse(period.substring(5)) ?? 1;
+      final year = int.tryParse(period.split("M")[0]) ?? DateTime.now().year;
+      final month = int.tryParse(period.split("M")[1]) ?? 1;
       return DateFormat.MMM().format(DateTime(year, month));
     }
     return period;
@@ -459,26 +573,34 @@ class SpendingBarChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF3c5070))),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF3c5070),
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
               const Icon(Icons.attach_money, color: Colors.green, size: 20),
               const SizedBox(width: 6),
-              Text(spendingText,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.green)),
+              Text(
+                spendingText,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.green,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
-          const Text("Compared to last 3 records",
-              style: TextStyle(color: Colors.black54, fontSize: 12)),
+          const Text(
+            "Compared to last records",
+            style: TextStyle(color: Colors.black54, fontSize: 12),
+          ),
           const SizedBox(height: 1),
           Expanded(
             child: BarChart(
@@ -522,13 +644,14 @@ class SpendingBarChartCard extends StatelessWidget {
   }
 }
 
-// Transaction History Section
 class TransactionHistorySection extends StatefulWidget {
   final List<Transaction> transactions;
+
   const TransactionHistorySection({super.key, required this.transactions});
 
   @override
-  State<TransactionHistorySection> createState() => _TransactionHistorySectionState();
+  State<TransactionHistorySection> createState() =>
+      _TransactionHistorySectionState();
 }
 
 class _TransactionHistorySectionState extends State<TransactionHistorySection> {
@@ -536,8 +659,9 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
 
   @override
   Widget build(BuildContext context) {
-    final visibleTransactions =
-    showAll ? widget.transactions : [widget.transactions.first];
+    final visibleTransactions = showAll
+        ? widget.transactions
+        : [widget.transactions.first];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -545,11 +669,14 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text("Transaction History",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Color(0xFF112250))),
+            const Text(
+              "Transaction History",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Color(0xFF112250),
+              ),
+            ),
             GestureDetector(
               onTap: () {
                 setState(() {
@@ -559,9 +686,10 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
               child: Text(
                 showAll ? "See Less" : "See All",
                 style: const TextStyle(
-                    color: Colors.blue,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500),
+                  color: Colors.blue,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -600,31 +728,42 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.white,
-                      child: Icon(iconData, color: iconColor),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.white,
+                        child: Icon(iconData, color: iconColor),
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(tx.title,
-                              style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF112250))),
-                          Text(tx.subtitle,
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.black38)),
-                        ]),
-                  ]),
+                          Text(
+                            tx.title,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF112250),
+                            ),
+                          ),
+                          Text(
+                            tx.subtitle,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black38,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                   Text(
                     "${tx.isExpense ? "-" : "+"} ${tx.amount.toStringAsFixed(0)} ${tx.unit}",
                     style: TextStyle(
-                        color: tx.isExpense ? Colors.red : Colors.green,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14),
+                      color: tx.isExpense ? Colors.red : Colors.green,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
@@ -636,9 +775,9 @@ class _TransactionHistorySectionState extends State<TransactionHistorySection> {
   }
 }
 
-// Previous Usage List
 class PreviousUsageList extends StatefulWidget {
   final List<UsageData> previousUsages;
+
   const PreviousUsageList({super.key, required this.previousUsages});
 
   @override
@@ -654,8 +793,18 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
         final year = period.split("M")[0];
         final month = int.parse(period.split("M")[1]);
         final monthName = [
-          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
         ][month - 1];
         return "$monthName $year";
       } else if (period.contains("W")) {
@@ -671,6 +820,65 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
 
   @override
   Widget build(BuildContext context) {
+    final weeks = widget.previousUsages.where((u) => u.type == "week").toList();
+    final bills = widget.previousUsages.where((u) => u.type == "bill").toList();
+    final Map<String, double> monthlyTotals = {};
+    for (var w in weeks) {
+      final year = int.parse(w.period.substring(0, 4));
+      final weekNum = int.parse(w.period.substring(5));
+      final date = DateTime(year).add(Duration(days: (weekNum - 1) * 7));
+      final monthKey = "${date.year}M${date.month.toString().padLeft(2, '0')}";
+
+      monthlyTotals[monthKey] = (monthlyTotals[monthKey] ?? 0) + w.weeklyLiters;
+    }
+
+    final weeklyCards = weeks.map(
+      (usage) => {
+        "period": usage.period,
+        "widget": _buildCard(
+          title: formatPeriod(usage.period),
+          usage: usage.weeklyLiters,
+          bill: 0,
+        ),
+      },
+    );
+
+    final monthlyCards = monthlyTotals.entries.map((entry) {
+      final monthKey = entry.key;
+      final totalUsage = entry.value;
+
+      final billForMonth = bills.firstWhere(
+        (b) => b.period == monthKey,
+        orElse: () => UsageData(
+          userId: "",
+          type: "bill",
+          period: monthKey,
+          liters: 0,
+          weeklyLiters: 0,
+          billMonthly: 0,
+        ),
+      );
+
+      return {
+        "period": monthKey,
+        "widget": _buildCard(
+          title: formatPeriod(monthKey),
+          usage: totalUsage,
+          bill: billForMonth.billMonthly,
+        ),
+      };
+    });
+
+    final allCards = [...weeklyCards, ...monthlyCards];
+
+    allCards.sort((a, b) {
+      final pa = a["period"] as String;
+      final pb = b["period"] as String;
+      return pb.compareTo(pa);
+    });
+
+    final visibleCards = show ? allCards : allCards.take(2).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -699,136 +907,89 @@ class _PreviousUsageListState extends State<PreviousUsageList> {
           ],
         ),
         const SizedBox(height: 12),
-
-        // Kartlar
-        if (show)
-          SizedBox(
-            height: 170,
-            child: ListView.separated(
-              physics: const BouncingScrollPhysics(),
-              scrollDirection: Axis.horizontal,
-              itemCount: widget.previousUsages.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final usage = widget.previousUsages[index];
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                    child: Container(
-                      width: 200,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.55),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: Colors.black12, width: 0.6),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 6,
-                            offset: const Offset(2, 3),
-                          )
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Dönem
-                          Text(
-                            formatPeriod(usage.period),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Color(0xFF112250),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const Divider(
-                              height: 14, thickness: 1, color: Colors.black12),
-
-                          // Usage
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 12,
-                                backgroundColor: Colors.blue.withOpacity(0.15),
-                                child: const Icon(Icons.water_drop,
-                                    size: 16, color: Colors.blueAccent),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  "${usage.liters} L",
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.blueAccent,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-
-                          // Bill
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 12,
-                                backgroundColor: Colors.green.withOpacity(0.15),
-                                child: const Icon(Icons.attach_money,
-                                    size: 16, color: Colors.green),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  "₺${usage.billMonthly}",
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.green,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-
-                          // Goal
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 12,
-                                backgroundColor:
-                                Colors.orange.withOpacity(0.15),
-                                child: const Icon(Icons.flag,
-                                    size: 16, color: Colors.orangeAccent),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  "${usage.goal} L",
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.orangeAccent,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+        SizedBox(
+          height: 170,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: visibleCards.map((c) => c["widget"] as Widget).toList(),
           ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildCard({
+    required String title,
+    required double usage,
+    required double bill,
+  }) {
+    return Container(
+      width: 200,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.black12, width: 0.6),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(2, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Color(0xFF112250),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          const Divider(height: 14, thickness: 1, color: Colors.black12),
+          Row(
+            children: [
+              const Icon(Icons.water_drop, size: 16, color: Colors.blueAccent),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  "Usage: ${usage.toStringAsFixed(0)} L",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blueAccent,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          if (bill > 0)
+            Row(
+              children: [
+                const Icon(Icons.attach_money, size: 16, color: Colors.green),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    "₺${bill.toStringAsFixed(0)}",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }

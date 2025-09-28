@@ -32,7 +32,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         email: _emailController.text.trim(),
       );
 
-      // Her zaman aynı mesaj (hesap olsa da olmasa da)
       showSuccessDialog(
         context,
         "If an account exists for this email, a reset link has been sent.",
@@ -44,7 +43,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         },
       );
     } on FirebaseAuthException catch (e) {
-      // Hangi kod olursa olsun kullanıcıya aynı mesajı göster
       showSuccessDialog(
         context,
         "If an account exists for this email, a reset link has been sent.",
@@ -95,8 +93,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  const Icon(Icons.lock_reset,
-                      size: 80, color: Color(0xFF112250)),
+                  const Icon(
+                    Icons.lock_reset,
+                    size: 80,
+                    color: Color(0xFF112250),
+                  ),
                   const SizedBox(height: 16),
                   const Text(
                     "Reset Password",
@@ -108,7 +109,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Email
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -125,7 +125,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   ),
                   const SizedBox(height: 30),
 
-                  // Reset button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -141,13 +140,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
-                        "Send Reset Link",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFD8CBC2),
-                        ),
-                      ),
+                              "Send Reset Link",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFD8CBC2),
+                              ),
+                            ),
                     ),
                   ),
                 ],

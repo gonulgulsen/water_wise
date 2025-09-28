@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 void showErrorMessage(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
+  final rootContext = Navigator.of(context).overlay!.context;
+  ScaffoldMessenger.of(rootContext).showSnackBar(
     SnackBar(
       backgroundColor: Colors.redAccent.withOpacity(0.9),
       behavior: SnackBarBehavior.floating,
@@ -25,7 +26,8 @@ void showErrorMessage(BuildContext context, String message) {
 }
 
 void showSuccessMessage(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
+  final rootContext = Navigator.of(context).overlay!.context;
+  ScaffoldMessenger.of(rootContext).showSnackBar(
     SnackBar(
       backgroundColor: Colors.green.withOpacity(0.9),
       behavior: SnackBarBehavior.floating,

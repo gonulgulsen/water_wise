@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 import 'dart:math';
+import '../utils/snackbar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,12 +13,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  DateTime _selectedDate = DateTime.now();
-  final _litersCtrl = TextEditingController();
   final _weeklyCtrl = TextEditingController();
   final _billCtrl = TextEditingController();
-  final _goalCtrl = TextEditingController();
-
+  final _dateCtrl = TextEditingController();
+  bool _showBillField = false;
+  DateTime _selectedDate = DateTime.now();
   Offset? fabPosition;
 
   @override
@@ -32,48 +31,138 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _dateCtrl.text = _selectedDate.toString().split(" ")[0];
+  }
+
+  @override
+  void dispose() {
+    _weeklyCtrl.dispose();
+    _billCtrl.dispose();
+    _dateCtrl.dispose();
+    super.dispose();
+  }
+
+  String _monthKey(DateTime d) =>
+      "${d.year}M${d.month.toString().padLeft(2, '0')}";
+
+  String _weekKey(DateTime d) {
+    final monday = d.subtract(Duration(days: d.weekday - 1));
+    final firstMonday = DateTime(
+      d.year,
+      1,
+      1,
+    ).subtract(Duration(days: DateTime(d.year, 1, 1).weekday - 1));
+    final weekNumber =
+        ((monday.difference(firstMonday).inDays) / 7).floor() + 1;
+    return "${d.year}W${weekNumber.toString().padLeft(2, '0')}";
+  }
+
   Future<void> _saveUsage() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("User not logged in")));
+      Navigator.pop(context);
+      Future.delayed(const Duration(milliseconds: 200), () {
+        showErrorMessage(context, "User not logged in.");
+      });
       return;
     }
 
-    final monthlyLiters = double.tryParse(_litersCtrl.text) ?? 0;
-    final weeklyLiters = double.tryParse(_weeklyCtrl.text) ?? 0;
-    final bill = double.tryParse(_billCtrl.text) ?? 0;
-    final goal = double.tryParse(_goalCtrl.text) ?? 0;
+    final now = _selectedDate;
+    final monthKey = _monthKey(now);
+    final weekKey = _weekKey(now);
 
-    final month = _selectedDate.month.toString().padLeft(2, '0');
-    final docId = "${user.uid}_${DateTime.now().millisecondsSinceEpoch}";
+    final weeklyLiters = double.tryParse(_weeklyCtrl.text.trim());
+    final bill = double.tryParse(_billCtrl.text.trim());
 
-    final data = {
-      "userId": user.uid,
-      "date": Timestamp.fromDate(_selectedDate),
-      "monthlyLiters": monthlyLiters,
-      "weeklyLiters": weeklyLiters,
-      "billMonthly": bill,
-      "goal": goal,
-      "period": "${_selectedDate.year}M$month",
-      "type": "monthly",
-    };
+    if ((weeklyLiters == null || weeklyLiters <= 0) &&
+        (!_showBillField || bill == null || bill <= 0)) {
+      Navigator.pop(context);
+      Future.delayed(const Duration(milliseconds: 200), () {
+        showErrorMessage(context, "Please enter at least one value.");
+      });
+      return;
+    }
 
-    await FirebaseFirestore.instance
-        .collection("usages")
-        .doc(docId)
-        .set(data, SetOptions(merge: true));
+    final usageRef = FirebaseFirestore.instance.collection("usages");
 
-    Navigator.pop(context);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Usage saved successfully!")));
+    if (weeklyLiters != null && weeklyLiters > 0) {
+      final existingWeek = await usageRef
+          .where("userId", isEqualTo: user.uid)
+          .where("type", isEqualTo: "week")
+          .where("weekKey", isEqualTo: weekKey)
+          .get();
 
-    _litersCtrl.clear();
-    _weeklyCtrl.clear();
-    _billCtrl.clear();
-    _goalCtrl.clear();
+      if (existingWeek.docs.isNotEmpty) {
+        Navigator.pop(context);
+        Future.delayed(const Duration(milliseconds: 200), () {
+          showErrorMessage(
+            context,
+            "⚠️ A record already exists for this week.",
+          );
+        });
+        return;
+      }
+    }
+
+    if (_showBillField && bill != null && bill > 0) {
+      final existingBill = await usageRef
+          .where("userId", isEqualTo: user.uid)
+          .where("type", isEqualTo: "bill")
+          .where("monthKey", isEqualTo: monthKey)
+          .get();
+
+      if (existingBill.docs.isNotEmpty) {
+        Navigator.pop(context);
+        Future.delayed(const Duration(milliseconds: 200), () {
+          showErrorMessage(
+            context,
+            "⚠️ You already added a bill for this month.",
+          );
+        });
+        return;
+      }
+    }
+
+    final batch = FirebaseFirestore.instance.batch();
+
+    if (weeklyLiters != null && weeklyLiters > 0) {
+      final weekDoc = usageRef.doc();
+      batch.set(weekDoc, {
+        "userId": user.uid,
+        "type": "week",
+        "date": Timestamp.fromDate(now),
+        "weekKey": weekKey,
+        "monthKey": monthKey,
+        "weeklyLiters": weeklyLiters,
+      });
+    }
+
+    if (_showBillField && bill != null && bill > 0) {
+      final billDoc = usageRef.doc();
+      batch.set(billDoc, {
+        "userId": user.uid,
+        "type": "bill",
+        "date": Timestamp.fromDate(now),
+        "monthKey": monthKey,
+        "billMonthly": bill,
+      });
+    }
+
+    await batch.commit();
+
+    if (mounted) {
+      Navigator.pop(context);
+      Future.delayed(const Duration(milliseconds: 200), () {
+        showSuccessMessage(context, "Usage saved successfully ✅");
+      });
+
+      _weeklyCtrl.clear();
+      _billCtrl.clear();
+      setState(() => _showBillField = false);
+    }
   }
 
   void _openUsageSheet() {
@@ -105,16 +194,32 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const Text(
-                    "Please enter your usage",
+                    "Enter your weekly usage",
                     style: TextStyle(color: Color(0xFFF5FDE8), fontSize: 16),
                   ),
                   const SizedBox(height: 16),
 
                   TextField(
-                    controller: _litersCtrl,
-                    keyboardType: TextInputType.number,
+                    controller: _dateCtrl,
+                    readOnly: true,
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _selectedDate = picked;
+                          _dateCtrl.text = _selectedDate.toString().split(
+                            " ",
+                          )[0];
+                        });
+                      }
+                    },
                     style: const TextStyle(color: Color(0xFFF5FDE8)),
-                    decoration: _input("Monthly Consumption (liters)"),
+                    decoration: _input("Select Date"),
                   ),
                   const SizedBox(height: 16),
 
@@ -126,28 +231,51 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  TextField(
-                    controller: _billCtrl,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Color(0xFFF5FDE8)),
-                    decoration: _input("Bill (₺)"),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.account_balance_wallet,
+                          color: Colors.amber,
+                          size: 28,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showBillField = !_showBillField;
+                          });
+                          Navigator.pop(ctx);
+                          Future.delayed(const Duration(milliseconds: 200), () {
+                            _openUsageSheet();
+                          });
+                        },
+                      ),
+                      const Text(
+                        "Add Monthly Bill",
+                        style: TextStyle(color: Color(0xFFF5FDE8)),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
 
-                  TextField(
-                    controller: _goalCtrl,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Color(0xFFF5FDE8)),
-                    decoration: _input("Goal (liters)"),
-                  ),
-                  const SizedBox(height: 18),
+                  if (_showBillField)
+                    Column(
+                      children: [
+                        TextField(
+                          controller: _billCtrl,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Color(0xFFF5FDE8)),
+                          decoration: _input("Monthly Bill (₺)"),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
 
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFEDC58F),
-                        foregroundColor: const Color(0xFFD8CBC2),
+                        foregroundColor: const Color(0xFF112255),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -177,15 +305,6 @@ class _HomePageState extends State<HomePage> {
         borderSide: const BorderSide(color: Colors.white30),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _litersCtrl.dispose();
-    _weeklyCtrl.dispose();
-    _billCtrl.dispose();
-    _goalCtrl.dispose();
-    super.dispose();
   }
 
   @override
@@ -220,18 +339,8 @@ class _HomePageState extends State<HomePage> {
                         );
                       }
                       final data = snap.data!.data() as Map<String, dynamic>;
-                      final city =
-                          toBeginningOfSentenceCase(
-                            (data["city"] ?? "-").toString(),
-                            'tr_TR',
-                          ) ??
-                          '-';
-                      final district =
-                          toBeginningOfSentenceCase(
-                            (data["district"] ?? "-").toString(),
-                            'tr_TR',
-                          ) ??
-                          '-';
+                      final city = (data["city"] ?? "-").toString();
+                      final district = (data["district"] ?? "-").toString();
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,73 +377,93 @@ class _HomePageState extends State<HomePage> {
                       ReservoirPieChart(city: "Ankara"),
                       const SizedBox(height: 20),
 
-                      // Goal Progress
-                      StreamBuilder<QuerySnapshot>(
+                      StreamBuilder<DocumentSnapshot>(
                         stream: FirebaseFirestore.instance
-                            .collection("usages")
-                            .where(
-                              "userId",
-                              isEqualTo: FirebaseAuth.instance.currentUser?.uid,
-                            )
-                            .orderBy("date", descending: true)
-                            .limit(1)
+                            .collection("goal")
+                            .doc("ankara")
                             .snapshots(),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            );
+                        builder: (context, goalSnap) {
+                          if (!goalSnap.hasData || !goalSnap.data!.exists) {
+                            return const Text("No goal data");
                           }
-                          if (snapshot.data!.docs.isEmpty) {
-                            return const Text("No usage data found");
-                          }
-                          final doc =
-                              snapshot.data!.docs.first.data()
-                                  as Map<String, dynamic>;
-                          final liters = (doc["monthlyLiters"] ?? 0).toDouble();
-                          final goal = (doc["goal"] ?? 0).toDouble();
-                          return GoalProgressCard(liters: liters, goal: goal);
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection("usages")
-                            .where(
-                              "userId",
-                              isEqualTo: FirebaseAuth.instance.currentUser?.uid,
-                            )
-                            .orderBy("date", descending: true)
-                            .limit(2)
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            );
-                          }
-                          if (snapshot.data!.docs.length < 2) {
-                            return const Text("Not enough data for comparison");
-                          }
-                          final docs = snapshot.data!.docs;
-                          final current =
-                              docs[0].data() as Map<String, dynamic>;
-                          final previous =
-                              docs[1].data() as Map<String, dynamic>;
-
-                          final cur = (current["monthlyLiters"] ?? 0)
+                          final goalData =
+                              goalSnap.data!.data() as Map<String, dynamic>;
+                          final goalMonthly = (goalData["goalMonthly"] ?? 0)
                               .toDouble();
-                          final prev = (previous["monthlyLiters"] ?? 0)
+                          final goalWeekly = (goalData["goalWeekly"] ?? 0)
                               .toDouble();
 
-                          final diff = cur - prev;
-                          final percent = prev > 0 ? (diff / prev * 100) : 0.0;
+                          return StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection("usages")
+                                .where(
+                                  "userId",
+                                  isEqualTo:
+                                      FirebaseAuth.instance.currentUser?.uid,
+                                )
+                                .where("type", isEqualTo: "week")
+                                .where(
+                                  "monthKey",
+                                  isEqualTo: _monthKey(DateTime.now()),
+                                )
+                                .snapshots(),
+                            builder: (context, usageSnap) {
+                              if (!usageSnap.hasData) {
+                                return const CircularProgressIndicator();
+                              }
+                              final docs = usageSnap.data!.docs;
+                              final weeklyUsages = docs
+                                  .map(
+                                    (d) =>
+                                        ((d.data()
+                                                    as Map<
+                                                      String,
+                                                      dynamic
+                                                    >)["weeklyLiters"] ??
+                                                0)
+                                            .toDouble(),
+                                  )
+                                  .toList()
+                                  .cast<double>();
 
-                          return ComparisonCard(
-                            current: cur,
-                            previous: prev,
-                            percentChange: percent.toStringAsFixed(1),
+                              final totalLiters = weeklyUsages.fold(
+                                0.0,
+                                (sum, v) => sum + v,
+                              );
+
+                              return Column(
+                                children: [
+                                  GoalProgressCard(
+                                    liters: totalLiters,
+                                    goalMonthly: goalMonthly,
+                                    goalWeekly: goalWeekly,
+                                    weeklyUsages: weeklyUsages,
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  if (docs.length >= 2)
+                                    ComparisonCard(
+                                      current:
+                                          (docs[0].data()
+                                                  as Map<
+                                                    String,
+                                                    dynamic
+                                                  >)["weeklyLiters"]
+                                              ?.toDouble() ??
+                                          0.0,
+                                      previous:
+                                          (docs[1].data()
+                                                  as Map<
+                                                    String,
+                                                    dynamic
+                                                  >)["weeklyLiters"]
+                                              ?.toDouble() ??
+                                          0.0,
+                                      goalMonthly: goalMonthly,
+                                    ),
+                                ],
+                              );
+                            },
                           );
                         },
                       ),
@@ -359,8 +488,9 @@ class _HomePageState extends State<HomePage> {
                             double newY = fabPosition!.dy + details.delta.dy;
                             if (newX < 0) newX = 0;
                             if (newY < 0) newY = 0;
-                            if (newX > screen.width - fabW)
+                            if (newX > screen.width - fabW) {
                               newX = screen.width - fabW;
+                            }
                             if (newY > screen.height - fabH - 100) {
                               newY = screen.height - fabH - 100;
                             }
@@ -395,19 +525,42 @@ class _HomePageState extends State<HomePage> {
 class ComparisonCard extends StatelessWidget {
   final double current;
   final double previous;
-  final String percentChange;
+  final double goalMonthly;
 
   const ComparisonCard({
     super.key,
     required this.current,
     required this.previous,
-    required this.percentChange,
+    required this.goalMonthly,
   });
 
   @override
   Widget build(BuildContext context) {
-    final changeValue = double.tryParse(percentChange) ?? 0.0;
-    final isDecrease = changeValue < 0;
+    final diff = current - previous;
+    final percent = previous > 0 ? (diff / previous * 100) : 0.0;
+
+    String message;
+    Color color;
+
+    if (current > previous) {
+      message =
+          "Oops! You used ${percent.toStringAsFixed(1)}% more water than last week.";
+      color = Colors.red;
+    } else if (current < previous) {
+      message =
+          "Great! You used ${percent.abs().toStringAsFixed(1)}% less water than last week.";
+      color = Colors.green;
+    } else {
+      message = "No change compared to last week.";
+      color = Colors.blueGrey;
+    }
+
+    if (current + previous < goalMonthly / 2 && current > 0 && previous > 0) {
+      message =
+          "👏 Good progress! You are still below half of your monthly goal.";
+      color = Colors.teal;
+    }
+
     final ratio = previous > 0 ? (current / previous).clamp(0.0, 2.0) : 1.0;
 
     return Container(
@@ -422,18 +575,21 @@ class ComparisonCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                isDecrease ? Icons.arrow_downward : Icons.arrow_upward,
-                color: isDecrease ? Colors.green : Colors.red,
+                current > previous
+                    ? Icons.arrow_upward
+                    : current < previous
+                    ? Icons.arrow_downward
+                    : Icons.remove,
+                color: color,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  isDecrease
-                      ? "Great! You used ${percentChange.replaceAll('-', '')}% less water than last time."
-                      : "Oops! You used $percentChange% more water than last time.",
-                  style: const TextStyle(
+                  message,
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF112250),
+                    fontWeight: FontWeight.w500,
+                    color: color,
                   ),
                 ),
               ),
@@ -443,7 +599,7 @@ class ComparisonCard extends StatelessWidget {
           LinearProgressIndicator(
             value: ratio > 1 ? 1 : ratio,
             backgroundColor: Colors.grey[300],
-            color: isDecrease ? Colors.green : Colors.red,
+            color: color,
             minHeight: 10,
             borderRadius: BorderRadius.circular(8),
           ),
@@ -460,14 +616,36 @@ class ComparisonCard extends StatelessWidget {
 
 class GoalProgressCard extends StatelessWidget {
   final double liters;
-  final double goal;
+  final double goalMonthly;
+  final double goalWeekly;
+  final List<double> weeklyUsages;
 
-  const GoalProgressCard({super.key, required this.liters, required this.goal});
+  const GoalProgressCard({
+    super.key,
+    required this.liters,
+    required this.goalMonthly,
+    required this.goalWeekly,
+    required this.weeklyUsages,
+  });
+
+  String _getStatusMessage() {
+    if (weeklyUsages.isNotEmpty && weeklyUsages.last > goalWeekly) {
+      return "⚠️ You exceeded your weekly limit.";
+    }
+    if (liters >= goalMonthly) {
+      return "❌ Sorry, you consumed more water than allowed this month.";
+    }
+    if (liters >= goalMonthly / 2) {
+      return "⚠️ You already consumed half of your monthly allowance in 2 weeks.";
+    }
+    return "✅ You are on track, keep it up!";
+  }
 
   @override
   Widget build(BuildContext context) {
-    final progress = goal > 0 ? (liters / goal).clamp(0.0, 1.0) : 0.0;
-    final remaining = goal - liters;
+    final progress = goalMonthly > 0
+        ? (liters / goalMonthly).clamp(0.0, 1.0)
+        : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -490,17 +668,72 @@ class GoalProgressCard extends StatelessWidget {
           LinearProgressIndicator(
             value: progress,
             backgroundColor: Colors.grey[300],
-            color: const Color(0xFF04bfda),
+            color: liters > goalMonthly ? Colors.red : const Color(0xFF04bfda),
             minHeight: 12,
             borderRadius: BorderRadius.circular(8),
           ),
           const SizedBox(height: 8),
           Text(
-            remaining > 0
-                ? "You need ${remaining.toStringAsFixed(0)} L more to reach your goal."
-                : "🎉 Goal reached! Great job!",
-            style: const TextStyle(fontSize: 14, color: Colors.black87),
+            _getStatusMessage(),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: liters > goalMonthly ? Colors.red : Colors.orange[800],
+            ),
           ),
+          const SizedBox(height: 12),
+
+          if (weeklyUsages.isNotEmpty)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Weekly Records",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF112250),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...List.generate(weeklyUsages.length, (i) {
+                  final value = weeklyUsages[i];
+                  final exceeded = value > goalWeekly;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: exceeded ? Colors.red : Colors.grey.shade300,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          exceeded ? Icons.warning : Icons.water_drop,
+                          color: exceeded ? Colors.red : Colors.blue,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Week ${i + 1}: ${value.toStringAsFixed(0)} L",
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: exceeded ? Colors.red : Colors.black,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
         ],
       ),
     );

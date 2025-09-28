@@ -387,7 +387,7 @@ class _HomePageState extends State<HomePage> {
                             return const Text("No goal data");
                           }
                           final goalData =
-                              goalSnap.data!.data() as Map<String, dynamic>;
+                          goalSnap.data!.data() as Map<String, dynamic>;
                           final goalMonthly = (goalData["goalMonthly"] ?? 0)
                               .toDouble();
                           final goalWeekly = (goalData["goalWeekly"] ?? 0)
@@ -397,15 +397,15 @@ class _HomePageState extends State<HomePage> {
                             stream: FirebaseFirestore.instance
                                 .collection("usages")
                                 .where(
-                                  "userId",
-                                  isEqualTo:
-                                      FirebaseAuth.instance.currentUser?.uid,
-                                )
+                              "userId",
+                              isEqualTo:
+                              FirebaseAuth.instance.currentUser?.uid,
+                            )
                                 .where("type", isEqualTo: "week")
                                 .where(
-                                  "monthKey",
-                                  isEqualTo: _monthKey(DateTime.now()),
-                                )
+                              "monthKey",
+                              isEqualTo: _monthKey(DateTime.now()),
+                            )
                                 .snapshots(),
                             builder: (context, usageSnap) {
                               if (!usageSnap.hasData) {
@@ -415,20 +415,20 @@ class _HomePageState extends State<HomePage> {
                               final weeklyUsages = docs
                                   .map(
                                     (d) =>
-                                        ((d.data()
-                                                    as Map<
-                                                      String,
-                                                      dynamic
-                                                    >)["weeklyLiters"] ??
-                                                0)
-                                            .toDouble(),
-                                  )
+                                    ((d.data()
+                                    as Map<
+                                        String,
+                                        dynamic
+                                    >)["weeklyLiters"] ??
+                                        0)
+                                        .toDouble(),
+                              )
                                   .toList()
                                   .cast<double>();
 
                               final totalLiters = weeklyUsages.fold(
                                 0.0,
-                                (sum, v) => sum + v,
+                                    (sum, v) => sum + v,
                               );
 
                               return Column(
@@ -441,28 +441,53 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   const SizedBox(height: 12),
 
+                                  if (weeklyUsages.isNotEmpty && weeklyUsages.last > goalWeekly)
+                                    const StatusCard(
+                                      message: "⚠️ You exceeded your weekly limit.",
+                                      color: Colors.orange,
+                                      icon: Icons.warning,
+                                    ),
+
+                                  const SizedBox(height: 12),
+                                  if (totalLiters >= goalMonthly)
+                                    const StatusCard(
+                                      message:
+                                      "❌ Sorry, you consumed more water than allowed this month.",
+                                      color: Colors.red,
+                                      icon: Icons.close,
+                                    )
+                                  else if (totalLiters >= goalMonthly / 2)
+                                    const StatusCard(
+                                      message:
+                                      "⚠️ Oops! You already consumed half of your monthly goal.",
+                                      color: Colors.orange,
+                                      icon: Icons.warning,
+                                    )
+                                  else
+                                    const StatusCard(
+                                      message:
+                                      "👏 Good progress! You are still below half of your monthly goal.",
+                                      color: Colors.green,
+                                      icon: Icons.thumb_up,
+                                    ),
+
+                                  const SizedBox(height: 12),
+
                                   if (docs.length >= 2)
                                     ComparisonCard(
-                                      current:
-                                          (docs[0].data()
-                                                  as Map<
-                                                    String,
-                                                    dynamic
-                                                  >)["weeklyLiters"]
-                                              ?.toDouble() ??
+                                      current: (docs[0].data()
+                                      as Map<String, dynamic>)["weeklyLiters"]
+                                          ?.toDouble() ??
                                           0.0,
-                                      previous:
-                                          (docs[1].data()
-                                                  as Map<
-                                                    String,
-                                                    dynamic
-                                                  >)["weeklyLiters"]
-                                              ?.toDouble() ??
+                                      previous: (docs[1].data()
+                                      as Map<String, dynamic>)["weeklyLiters"]
+                                          ?.toDouble() ??
                                           0.0,
                                       goalMonthly: goalMonthly,
                                     ),
                                 ],
                               );
+
                             },
                           );
                         },
@@ -522,6 +547,47 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+class StatusCard extends StatelessWidget {
+  final String message;
+  final Color color;
+  final IconData icon;
+
+  const StatusCard({
+    super.key,
+    required this.message,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5FDE8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class ComparisonCard extends StatelessWidget {
   final double current;
   final double previous;
@@ -544,11 +610,11 @@ class ComparisonCard extends StatelessWidget {
 
     if (current > previous) {
       message =
-          "Oops! You used ${percent.toStringAsFixed(1)}% more water than last week.";
+      "Oops! You used ${percent.toStringAsFixed(1)}% more water than last week.";
       color = Colors.red;
     } else if (current < previous) {
       message =
-          "Great! You used ${percent.abs().toStringAsFixed(1)}% less water than last week.";
+      "Great! You used ${percent.abs().toStringAsFixed(1)}% less water than last week.";
       color = Colors.green;
     } else {
       message = "No change compared to last week.";
@@ -557,7 +623,7 @@ class ComparisonCard extends StatelessWidget {
 
     if (current + previous < goalMonthly / 2 && current > 0 && previous > 0) {
       message =
-          "👏 Good progress! You are still below half of your monthly goal.";
+      "👏 Good progress! You are still below half of your monthly goal.";
       color = Colors.teal;
     }
 
@@ -628,19 +694,6 @@ class GoalProgressCard extends StatelessWidget {
     required this.weeklyUsages,
   });
 
-  String _getStatusMessage() {
-    if (weeklyUsages.isNotEmpty && weeklyUsages.last > goalWeekly) {
-      return "⚠️ You exceeded your weekly limit.";
-    }
-    if (liters >= goalMonthly) {
-      return "❌ Sorry, you consumed more water than allowed this month.";
-    }
-    if (liters >= goalMonthly / 2) {
-      return "⚠️ You already consumed half of your monthly allowance in 2 weeks.";
-    }
-    return "✅ You are on track, keep it up!";
-  }
-
   @override
   Widget build(BuildContext context) {
     final progress = goalMonthly > 0
@@ -672,15 +725,6 @@ class GoalProgressCard extends StatelessWidget {
             minHeight: 12,
             borderRadius: BorderRadius.circular(8),
           ),
-          const SizedBox(height: 8),
-          Text(
-            _getStatusMessage(),
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: liters > goalMonthly ? Colors.red : Colors.orange[800],
-            ),
-          ),
           const SizedBox(height: 12),
 
           if (weeklyUsages.isNotEmpty)
@@ -703,12 +747,10 @@ class GoalProgressCard extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 6),
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: exceeded
+                          ? Colors.red.withOpacity(0.1)
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: exceeded ? Colors.red : Colors.grey.shade300,
-                        width: 1,
-                      ),
                     ),
                     child: Row(
                       children: [

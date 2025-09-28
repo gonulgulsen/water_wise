@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../utils/snackbar.dart';
 
 class PlantPage extends StatefulWidget {
   const PlantPage({super.key});
@@ -28,16 +29,12 @@ class _PlantPageState extends State<PlantPage> {
           const AssetImage('assets/images/arkaplansilinmisagac.png'),
           context,
         );
-      } catch (_) {
-        /* ignore */
-      }
+      } catch (_) {}
     });
   }
 
   void _onDonationConfirmed(int count) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Thanks! +$count trees donated 🌳')));
+    showSuccessMessage(context, 'Thanks! +$count trees donated 🌳');
   }
 
   @override
@@ -247,13 +244,9 @@ class _DonationCardState extends State<_DonationCard> {
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-
               if (!widget.usePaymentSheet) {
                 widget.onConfirmed(_count);
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Donation completed 🌳')),
-                );
+                showSuccessMessage(context, 'Donation completed 🌳');
                 return;
               }
 
@@ -262,9 +255,9 @@ class _DonationCardState extends State<_DonationCard> {
 
               if (ok == true) {
                 widget.onConfirmed(_count);
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Donation completed 🌳')),
-                );
+                showSuccessMessage(context, 'Donation completed 🌳');
+              } else {
+                showErrorMessage(context, 'Payment was cancelled ❌');
               }
             },
             child: const Text('Donate'),
@@ -416,7 +409,6 @@ class _PaymentSheetState extends State<_PaymentSheet> {
               ),
               const SizedBox(height: 12),
 
-              // ---------- Saved cards ----------
               if (_savedCards.isNotEmpty) ...[
                 const Text(
                   'Saved cards',
@@ -466,10 +458,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                       label: 'Card holder',
                       enabled: _selectedSaved == null,
                       validator: (v) {
-                        if (_selectedSaved != null)
-                          return null; // saved seçiliyse valide etme
-                        if (v == null || v.trim().length < 3)
+                        if (_selectedSaved != null) return null;
+                        if (v == null || v.trim().length < 3) {
                           return 'Enter a name';
+                        }
                         return null;
                       },
                     ),

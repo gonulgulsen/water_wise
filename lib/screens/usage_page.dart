@@ -126,9 +126,17 @@ class _UsagePageState extends State<UsagePage> {
                     .fold(0.0, (sum, u) => sum + u.weeklyLiters);
 
                 final monthlyLiters = usages
-                    .where(
-                      (u) => u.type == "week" && u.period.startsWith(monthKey),
-                    )
+                    .where((u) => u.type == "week")
+                    .where((u) {
+                      final year = int.parse(u.period.substring(0, 4));
+                      final weekNum = int.parse(u.period.substring(5));
+                      final date = DateTime(
+                        year,
+                      ).add(Duration(days: (weekNum - 1) * 7));
+                      final monthKeyOfWeek =
+                          "${date.year}M${date.month.toString().padLeft(2, '0')}";
+                      return monthKeyOfWeek == monthKey;
+                    })
                     .fold(0.0, (sum, u) => sum + u.weeklyLiters);
 
                 final currentUsage = isWeekly ? weeklyLiters : monthlyLiters;
@@ -245,11 +253,29 @@ class _UsagePageState extends State<UsagePage> {
   }
 
   List<FlSpot> _buildLineChartData(List<UsageData> usages, bool weekly) {
-    final reversed = usages.reversed.toList();
-    return List.generate(reversed.length, (i) {
-      final data = reversed[i];
-      return FlSpot(i.toDouble(), weekly ? data.weeklyLiters : data.liters);
-    });
+    if (weekly) {
+      final weeklyUsages = usages.where((u) => u.type == "week").toList();
+      return List.generate(weeklyUsages.length, (i) {
+        final data = weeklyUsages[i];
+        return FlSpot(i.toDouble(), data.weeklyLiters);
+      });
+    } else {
+      final Map<String, double> monthlyTotals = {};
+      for (var u in usages.where((u) => u.type == "week")) {
+        final year = int.parse(u.period.substring(0, 4));
+        final weekNum = int.parse(u.period.substring(5));
+        final date = DateTime(year).add(Duration(days: (weekNum - 1) * 7));
+        final monthKey =
+            "${date.year}M${date.month.toString().padLeft(2, '0')}";
+        monthlyTotals[monthKey] =
+            (monthlyTotals[monthKey] ?? 0) + u.weeklyLiters;
+      }
+
+      final entries = monthlyTotals.entries.toList();
+      return List.generate(entries.length, (i) {
+        return FlSpot(i.toDouble(), entries[i].value);
+      });
+    }
   }
 
   List<BarChartGroupData> _buildBarChartData(List<UsageData> usages) {
